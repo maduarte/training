@@ -1090,7 +1090,7 @@ function wzInitDayGrid(){
   wzUpdateScheduleSummary();
 }
 
-
+function parsePace(str){
   if(!str)return null;
   const parts=str.split(':');
   if(parts.length!==2)return null;
