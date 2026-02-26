@@ -1,4 +1,3 @@
-
 // ── Feature Flags ────────────────────────────────────────────
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -1133,7 +1132,7 @@ async function wizardGenerate(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:8000,messages:[{role:'user',content:prompt}]})
     });
-    if(!resp.ok) throw new Error('API error ${resp.status}');
+    if(!resp.ok) throw new Error(`API error ${resp.status}`);
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('').trim();
     let weeks;
