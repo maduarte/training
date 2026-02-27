@@ -789,6 +789,7 @@ function openSyncModal(){
   const pat = syncGetPAT();
   if(pat) document.getElementById('sync-pat').value = pat;
   const gistId = syncGetGistId();
+  if(gistId) document.getElementById('sync-gist-manual').value = gistId;
   if(pat && gistId){
     syncSetStatus('Conectado · Gist: ' + gistId.slice(0,8) + '…', 'ok');
   } else if(pat){
@@ -897,8 +898,12 @@ async function syncPull(){
   const pat = document.getElementById('sync-pat').value.trim() || syncGetPAT();
   const gistId = syncGetGistId();
   if(!pat){ syncSetStatus('Introduce tu token primero.', 'err'); return; }
-  if(!gistId){ syncSetStatus('No hay Gist vinculado. Sube primero desde el dispositivo principal.', 'err'); return; }
-
+  
+  const manualId = document.getElementById('sync-gist-manual')?.value.trim();
+  if(manualId){ localStorage.setItem('tw_sync_gist_id', manualId); }
+  const gistId = syncGetGistId() || manualId;
+  if(!gistId){ syncSetStatus('No hay Gist vinculado. Introduce el Gist ID o sube primero desde el dispositivo principal.', 'err'); return; }
+  
   syncSetBtnState(true);
   syncSetStatus('Bajando…');
 
