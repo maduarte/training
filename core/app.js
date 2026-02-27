@@ -896,9 +896,7 @@ async function syncPush(){
 
 async function syncPull(){
   const pat = document.getElementById('sync-pat').value.trim() || syncGetPAT();
-  const gistId = syncGetGistId();
   if(!pat){ syncSetStatus('Introduce tu token primero.', 'err'); return; }
-  
   const manualId = document.getElementById('sync-gist-manual')?.value.trim();
   if(manualId){ localStorage.setItem('tw_sync_gist_id', manualId); }
   const gistId = syncGetGistId() || manualId;
