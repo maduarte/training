@@ -3,7 +3,7 @@
 // Bump CACHE_NAME cuando cambies cualquier archivo local
 // ══════════════════════════════════════════════════
 
-const CACHE_NAME = 'ncs-trail-v5';
+const CACHE_NAME = 'ncs-trail-v6';
 const FONT_CACHE = 'ncs-fonts-v1';  // caché separada y long-lived para fuentes
 
 // ── Archivos pre-cacheados en la instalación ───────
@@ -17,6 +17,8 @@ const APP_SHELL = [
   './ui/styles.css',
   // Chart.js desde CDN (necesario para la pestaña de analíticas)
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js',
+  // SheetJS para exportar/importar Excel
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
 ];
 
 // ── INSTALL: pre-cachear el app shell ──────────────

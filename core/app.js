@@ -37,7 +37,10 @@ function openSettings(){
     <div class="settings-section-label">ATLETA</div>
     <div class="settings-row">
       <div><div class="settings-row-label">${profile.avatar} ${profile.name}</div></div>
-      <button class="settings-row-action" onclick="closeSettings();openPaceModal(true)">Ritmos →</button>
+      <div style="display:flex;gap:6px">
+        <button class="settings-row-action" onclick="closeSettings();openProfileModal()">Editar →</button>
+        <button class="settings-row-action" onclick="closeSettings();openPaceModal(true)">Ritmos →</button>
+      </div>
     </div>
     <div class="settings-section-label" style="margin-top:16px">CARRERAS</div>
     ${raceRows}
@@ -46,6 +49,15 @@ function openSettings(){
     <div class="settings-row">
       <div><div class="settings-row-label">Sincronización</div><div class="settings-row-sub">GitHub Gist</div></div>
       <button class="settings-row-action" onclick="closeSettings();openSyncModal()">Sync →</button>
+    </div>
+    <div class="settings-section-label" style="margin-top:16px">EXCEL</div>
+    <div class="settings-row">
+      <div><div class="settings-row-label">Exportar calendario</div><div class="settings-row-sub">Descarga plan activo como .xlsx</div></div>
+      <button class="settings-row-action" onclick="exportToExcel()">Exportar ↓</button>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-row-label">Importar carrera</div><div class="settings-row-sub">Carga un plan desde archivo .xlsx</div></div>
+      <button class="settings-row-action" onclick="importFromExcel()">Importar ↑</button>
     </div>
   `;
   document.getElementById('settings-panel').classList.remove('hidden');
@@ -282,6 +294,32 @@ function updatePacePill(){
   const {easy,fast}=st.paces;
   document.getElementById('pp-easy').textContent='🟢 '+fmtPace(easy);
   document.getElementById('pp-fast').textContent='🔴 '+fmtPace(fast);
+}
+
+let _profAvatar='🏃';
+function openProfileModal(){
+  const profile=S.get('tw_profile')||{name:'Mauricio',avatar:'🏔'};
+  _profAvatar=profile.avatar||'🏃';
+  document.getElementById('prof-name').value=profile.name||'';
+  document.getElementById('prof-avatar-preview').textContent=_profAvatar;
+  const grid=document.getElementById('prof-avatar-grid');
+  grid.innerHTML=AVATARS.map(a=>`<button class="wz-avatar-btn${a===_profAvatar?' selected':''}" onclick="_profSelectAvatar('${a}')">${a}</button>`).join('');
+  document.getElementById('profile-overlay').classList.add('open');
+}
+function closeProfileModal(){
+  document.getElementById('profile-overlay').classList.remove('open');
+}
+function _profSelectAvatar(a){
+  _profAvatar=a;
+  document.getElementById('prof-avatar-preview').textContent=a;
+  document.querySelectorAll('#prof-avatar-grid .wz-avatar-btn').forEach(b=>b.classList.toggle('selected',b.textContent===a));
+}
+function saveProfileSettings(){
+  const name=document.getElementById('prof-name').value.trim();
+  if(!name){alert('El nombre no puede estar vacío.');return;}
+  const profile=S.get('tw_profile')||{};
+  S.set('tw_profile',{...profile,name,avatar:_profAvatar});
+  closeProfileModal();
 }
 
 function openPaceModal(canCancel){
@@ -1175,6 +1213,161 @@ async function wizardGenerate(){
     document.getElementById('wz-gen-label').textContent='Error al generar el plan';
     document.getElementById('wz-gen-sub').textContent='';
   }
+}
+
+// ══════════════════════════════════════════════════
+// EXCEL EXPORT / IMPORT
+// ══════════════════════════════════════════════════
+function exportToExcel(){
+  if(typeof XLSX==='undefined'){alert('Librería Excel no disponible. Recarga la app.');return;}
+  const race=getRaceById(st.raceId);
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1: race metadata
+  const raceWs=XLSX.utils.aoa_to_sheet([
+    ['Nombre','Fecha','Distancia_km','Desnivel_m'],
+    [race.name, race.date, race.distance||0, race.elevation||0]
+  ]);
+  XLSX.utils.book_append_sheet(wb,raceWs,'Carrera');
+
+  // Sheet 2: full plan
+  const hdrs=['Semana','Fase','Km_Semana','Fecha','Día','Tipo','Km_Plan','Series','Sesión','Descripción','Ejercicios','Km_Real','Tiempo_Real','Reacción'];
+  const rows=[hdrs];
+  st.weeks.forEach(w=>{
+    w.days.forEach(day=>{
+      const log=st.logs[day.id]||{};
+      const rxn=st.reactions[day.id]||'';
+      const exStr=day.exercises?day.exercises.map(ex=>`${ex.name} ${ex.reps}`).join('; '):'';
+      let timeStr='';
+      if(log.h!==undefined)timeStr=`${String(log.h).padStart(2,'0')}:${String(log.m).padStart(2,'0')}:${String(log.s).padStart(2,'0')}`;
+      else if(log.time)timeStr=log.time;
+      rows.push([
+        w.num??'Carrera', w.phase||'', w.totalKm||0,
+        day.date, day.label, day.type,
+        day.km||0, day.sets||'',
+        day.session, day.desc||'',
+        exStr,
+        log.distance||log.km||'', timeStr, rxn
+      ]);
+    });
+  });
+  const planWs=XLSX.utils.aoa_to_sheet(rows);
+  planWs['!cols']=[
+    {wch:8},{wch:13},{wch:10},{wch:12},{wch:18},{wch:10},
+    {wch:9},{wch:7},{wch:32},{wch:50},{wch:40},{wch:9},{wch:12},{wch:8}
+  ];
+  XLSX.utils.book_append_sheet(wb,planWs,'Plan');
+
+  const fname=`${(race.name||'plan').replace(/\s+/g,'-')}_${race.date}.xlsx`;
+  XLSX.writeFile(wb,fname);
+}
+
+function importFromExcel(){
+  if(typeof XLSX==='undefined'){alert('Librería Excel no disponible. Recarga la app.');return;}
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.xlsx,.xls';
+  input.onchange=e=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=evt=>{
+      try{
+        const wb=XLSX.read(evt.target.result,{type:'binary'});
+
+        // Race metadata
+        const raceWs=wb.Sheets['Carrera'];
+        if(!raceWs)throw new Error('Hoja "Carrera" no encontrada');
+        const raceRows=XLSX.utils.sheet_to_json(raceWs,{header:1});
+        if(raceRows.length<2)throw new Error('Hoja "Carrera" sin datos');
+        const [raceName,raceDate,raceDist,raceElev]=raceRows[1];
+        if(!raceName||!raceDate)throw new Error('Faltan nombre o fecha de carrera');
+
+        // Plan
+        const planWs=wb.Sheets['Plan'];
+        if(!planWs)throw new Error('Hoja "Plan" no encontrada');
+        const planRows=XLSX.utils.sheet_to_json(planWs,{header:1});
+        if(planRows.length<2)throw new Error('Hoja "Plan" sin datos');
+
+        const colHdrs=planRows[0];
+        const ix={};
+        colHdrs.forEach((h,i)=>ix[String(h)]=i);
+
+        const raceId='import_'+Date.now();
+        const logsOut={}, rxnOut={};
+        const weeksArr=[];
+        let curWeek=null, curWNum=undefined;
+
+        planRows.slice(1).forEach(row=>{
+          const wNum=row[ix['Semana']];
+          if(wNum!==curWNum){
+            curWeek={
+              num:typeof wNum==='number'?wNum:null,
+              phase:String(row[ix['Fase']]||'BASE'),
+              totalKm:Number(row[ix['Km_Semana']])||0,
+              dates:'', days:[]
+            };
+            weeksArr.push(curWeek);
+            curWNum=wNum;
+          }
+          const di=curWeek.days.length;
+          const dayId=`${raceId}_w${weeksArr.length-1}_d${di}`;
+          const tipo=String(row[ix['Tipo']]||'DESCANSO').toUpperCase();
+          const ejStr=String(row[ix['Ejercicios']]||'');
+          const exercises=ejStr?ejStr.split(';').filter(Boolean).map(s=>{
+            s=s.trim(); const sp=s.lastIndexOf(' ');
+            return sp>0?{name:s.slice(0,sp),reps:s.slice(sp+1)}:{name:s,reps:''};
+          }):undefined;
+          const day={
+            id:dayId,
+            date:String(row[ix['Fecha']]||''),
+            label:String(row[ix['Día']]||''),
+            session:String(row[ix['Sesión']]||''),
+            type:tipo,
+            km:Number(row[ix['Km_Plan']])||0,
+            desc:String(row[ix['Descripción']]||'')
+          };
+          const sets=row[ix['Series']];
+          if(sets)day.sets=Number(sets)||3;
+          if(exercises&&exercises.length)day.exercises=exercises;
+          curWeek.days.push(day);
+          if(day.date){
+            const d0=curWeek.dates.split('–')[0].trim();
+            curWeek.dates=(d0||day.date)+' – '+day.date;
+          }
+
+          // Logged data
+          const kmReal=row[ix['Km_Real']];
+          const tReal=String(row[ix['Tiempo_Real']]||'').trim();
+          const rxn=String(row[ix['Reacción']]||'').trim();
+          if(kmReal||tReal){
+            const pts=tReal.split(':');
+            logsOut[dayId]={
+              distance:Number(kmReal)||0, time:tReal,
+              h:Number(pts[0])||0, m:Number(pts[1])||0, s:Number(pts[2])||0
+            };
+          }
+          if(rxn&&rxn!=='undefined')rxnOut[dayId]=rxn;
+        });
+
+        const newRace={
+          id:raceId, name:String(raceName), date:String(raceDate),
+          distance:Number(raceDist)||0, elevation:Number(raceElev)||0,
+          weeks:weeksArr
+        };
+        const all=S.get('tw_races')||[];
+        all.push(newRace);
+        S.set('tw_races',all);
+        S.set(`tw_weeks_${raceId}`,weeksArr);
+        if(Object.keys(logsOut).length)S.set(`tw_logs_${raceId}`,logsOut);
+        if(Object.keys(rxnOut).length)S.set(`tw_rxn_${raceId}`,rxnOut);
+
+        closeSettings();
+        launchApp('mauricio',raceId);
+      }catch(err){alert('Error al importar: '+err.message);}
+    };
+    reader.readAsBinaryString(file);
+  };
+  input.click();
 }
 
 function migrateStorage(){

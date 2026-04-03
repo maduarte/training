@@ -17,6 +17,23 @@
 </head>
 
 <!-- PACE SETUP MODAL -->
+<div id="profile-overlay" onclick="if(event.target===this)closeProfileModal()">
+  <div id="pace-modal">
+    <div class="m-handle"></div>
+    <div class="pm-title">👤 Perfil de atleta</div>
+    <div class="pm-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div class="pm-label">Nombre</div>
+      <input class="sync-input" id="prof-name" type="text" maxlength="30" placeholder="Tu nombre" style="width:100%;box-sizing:border-box">
+    </div>
+    <div class="pm-row" style="flex-direction:column;align-items:flex-start;gap:6px;margin-top:8px">
+      <div class="pm-label">Avatar <span id="prof-avatar-preview" style="font-size:20px;margin-left:6px"></span></div>
+      <div class="wz-avatar-grid" id="prof-avatar-grid" style="margin-top:4px"></div>
+    </div>
+    <button class="pm-save" onclick="saveProfileSettings()" style="margin-top:20px">GUARDAR PERFIL</button>
+    <button class="pm-cancel" onclick="closeProfileModal()" style="display:block">Cancelar</button>
+  </div>
+</div>
+
 <div id="pace-overlay" onclick="if(event.target===this&&st.pacesSet)closePaceModal()">
   <div id="pace-modal">
     <div class="m-handle"></div>
@@ -296,6 +313,8 @@
 </div>
 
 
+<!-- SheetJS for Excel export/import -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- Scripts loaded in dependency order -->
 <script src="data/exercises.js"></script>
 <script src="core/storage.js"></script>

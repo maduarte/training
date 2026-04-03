@@ -221,6 +221,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .card-dur.has-dur{color:#555570}
 .card-dur svg{opacity:.5;flex-shrink:0}
 
+/* PROFILE EDIT MODAL */
+#profile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:150;display:none;align-items:flex-end}
+#profile-overlay.open{display:flex}
+
 /* PACE SETUP MODAL */
 #pace-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:150;display:none;align-items:flex-end}
 #pace-overlay.open{display:flex}
