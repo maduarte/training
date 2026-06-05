@@ -191,28 +191,24 @@ function buildWeeks(){return [
     W("w16d1","2026-06-02","Mar 2 Jun","Repeticiones taper","MEDIO",11,"WU 10min → 2×10min a ritmo umbral → CD 10min."),
     W("w16d2","2026-06-03","Mié 3 Jun","Descanso","DESCANSO",0,"Descanso activo. Repasa logística de carrera."),
     W("w16d3","2026-06-04","Jue 4 Jun","Rodaje suave","SUAVE",11,"6:40/km."),
-    W("w16d4","2026-06-05","Vie 5 Jun","Largo trail 20km","MEDIO",20,"800m D+. Taper largo. Ritmo cómodo."),
-    F("w16d5","2026-06-06","Sáb 6 Jun","Fuerza ligera",2,"Activación neuromuscular. Sin fatiga.",[
-      {name:"Sentadilla",reps:"10"},{name:"Activación de glúteo",reps:"15 c/lado"},
-      {name:"Trabajo de tobillo",reps:"15 c/dir."},{name:"Activación de core",reps:"5 min"}]),
+    W("w16d4","2026-06-05","Vie 5 Jun","Trail plano + cerro","MEDIO",14,"~500m D+. Primer retorno post-lesión. Límite Z2-Z3 (143-148 bpm). Bajadas muy controladas, paso corto."),
+    W("w16d5","2026-06-06","Sáb 6 Jun","Bici estática + activación","SUAVE",0,"🚲 35min bici estática Z1 (<131 bpm), cadencia suave — equivalente al rodaje de recuperación. Luego activación: sentadilla 10r, glúteo 15r c/lado, tobillo 15r, core 5min."),
     W("w16d6","2026-06-07","Dom 7 Jun","Descanso","DESCANSO",0,"Descanso completo."),
   ]},
-  {num:17,dates:"8–14 Jun",phase:"TAPER",totalKm:34,days:[
-    F("w17d0","2026-06-08","Lun 8 Jun","Fuerza muy ligera",2,"Solo activación articular y movilidad.",[
-      {name:"Activación articular",reps:"10 c/articulación"},{name:"Movilidad de cadera",reps:"10 c/dir."},
-      {name:"Activación de glúteo",reps:"12 c/lado"},{name:"Foam roller",reps:"30 seg/zona"}]),
-    W("w17d1","2026-06-09","Mar 9 Jun","Intervalos cortos","MEDIO",9,"WU 10min → 4×(3min fuerte / 90seg trote) → CD 10min."),
-    W("w17d2","2026-06-10","Mié 10 Jun","Rodaje suave","SUAVE",7,"6:40/km. Trail. Visualiza la carrera."),
-    W("w17d3","2026-06-11","Jue 11 Jun","Rodaje suave","SUAVE",6,"6:50/km. Corto y suave."),
-    W("w17d4","2026-06-12","Vie 12 Jun","Rodaje recuperación","SUAVE",5,"6:50/km. 25–30min muy suave."),
-    W("w17d5","2026-06-13","Sáb 13 Jun","Trail suave 12km","SUAVE",12,"350m D+. Muy cómodo. Última tirada larga."),
+  {num:17,dates:"8–14 Jun",phase:"TAPER",totalKm:46,days:[
+    W("w17d0","2026-06-08","Lun 8 Jun","Rodaje + fuerza en casa","SUAVE",8,"Rodaje 8km plano, límite Z2-Z3 (143-148 bpm). Después en casa: glúteo 12r c/lado, propioceptivo 30seg c/pie, foam roller."),
+    W("w17d1","2026-06-09","Mar 9 Jun","Kinesio + rodaje suave","SUAVE",8,"🏥 Kinesio. Luego rodaje 8km plano, límite Z2-Z3 (143-148 bpm). Sin intervalos hoy."),
+    W("w17d2","2026-06-10","Mié 10 Jun","Rodaje mixto","SUAVE",7,"Plano o terreno suave. Límite Z2-Z3 (143-148 bpm), ~5:50-6:10/km. Visualiza la carrera."),
+    W("w17d3","2026-06-11","Jue 11 Jun","Kinesio + rodaje suave","SUAVE",6,"🏥 Kinesio. Luego rodaje 6km plano, Z2 (131-145 bpm). Corto y controlado."),
+    W("w17d4","2026-06-12","Vie 12 Jun","Rodaje recuperación","SUAVE",5,"6:50/km. 25–30min muy suave. Descarga antes del trail del sábado."),
+    W("w17d5","2026-06-13","Sáb 13 Jun","Trail cerro + plano","MEDIO",12,"350m D+. Subidas al límite Z2-Z3 (143-148 bpm). Bajadas controladas, paso corto. Última sesión con desnivel."),
     W("w17d6","2026-06-14","Dom 14 Jun","Descanso","DESCANSO",0,"Descanso completo."),
   ]},
-  {num:18,dates:"15–21 Jun",phase:"TAPER FINAL",totalKm:17,days:[
-    W("w18d0","2026-06-15","Lun 15 Jun","Rodaje suave","SUAVE",7,"6:40/km. 7km se siente trivial: eso buscamos."),
-    W("w18d1","2026-06-16","Mar 16 Jun","Descanso","DESCANSO",0,"Descanso activo. Caminata 20min."),
+  {num:18,dates:"15–21 Jun",phase:"TAPER FINAL",totalKm:23,days:[
+    W("w18d0","2026-06-15","Lun 15 Jun","Rodaje mixto","SUAVE",7,"Plano con algún repecho. Límite Z2-Z3 (143-148 bpm). ~5:50-6:10/km. Sensaciones frescas."),
+    W("w18d1","2026-06-16","Mar 16 Jun","Kinesio + rodaje suave","SUAVE",6,"🏥 Kinesio. Luego rodaje 6km plano, Z2 (131-145 bpm). Liviano."),
     W("w18d2","2026-06-17","Mié 17 Jun","Descanso","DESCANSO",0,"Descanso. Hidratación óptima."),
-    W("w18d3","2026-06-18","Jue 18 Jun","Rodaje suave","SUAVE",5,"6:40/km. 25–30min. Mantiene el sistema activo."),
+    W("w18d3","2026-06-18","Jue 18 Jun","Kinesio + rodaje suave","SUAVE",5,"🏥 Kinesio. Luego rodaje 5km plano, Z2 (131-145 bpm). Mantiene el sistema activo."),
     W("w18d4","2026-06-19","Vie 19 Jun","Rodaje + strides","SUAVE",5,"6:40/km con 4×15seg strides al final."),
     F("w18d5","2026-06-20","Sáb 20 Jun","Movilidad + activación",1,"Sin pesas. Solo activación y movilidad.",[
       {name:"Yoga/movilidad",reps:"15 min"},{name:"Foam roller",reps:"30 seg/zona"},
