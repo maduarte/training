@@ -215,13 +215,13 @@ function buildWeeks(){return [
       {name:"Activación de glúteo",reps:"10 c/lado"},{name:"Activación de core",reps:"5 min"}]),
     W("w18d6","2026-06-21","Dom 21 Jun","Descanso","DESCANSO",0,"Carga de carbos gradual. Duerme temprano."),
   ]},
-  {num:"🏁",dates:"22–27 Jun",phase:"CARRERA",totalKm:50,days:[
+  {num:"🏁",dates:"22–27 Jun",phase:"CARRERA",totalKm:29,days:[
     W("wRd0","2026-06-22","Lun 22 Jun","Trote suave 6km","SUAVE",6,"6:40–6:50/km. Activa las piernas para la semana de carrera. Plano y relajado."),
     W("wRd1","2026-06-23","Mar 23 Jun","Movilidad + logística","DESCANSO",0,"Prepara mochila y equipo. Activación ligera 15min."),
     W("wRd2","2026-06-24","Mié 24 Jun","Trote + strides","SUAVE",3,"20min trote suave + 4×15seg strides. Carga de carbos."),
     W("wRd3","2026-06-25","Jue 25 Jun","Descanso","DESCANSO",0,"Recoge dorsal. Duerme temprano."),
     W("wRd4","2026-06-26","Vie 26 Jun","Descanso pre-carrera","DESCANSO",0,"Descanso completo. Cena con carbos."),
-    W("wRd5","2026-06-27","Sáb 27 Jun 🏁","CARRERA 44km","INTENSO",44,"1500m D+. ¡A correr! Sale al 70% los primeros 10km."),
+    W("wRd5","2026-06-27","Sáb 27 Jun 🏁","CARRERA 20km","INTENSO",20,"1500m D+. ¡A correr! Sale al 70% los primeros 10km."),
   ]},
   {num:19,dates:"28 Jun – 4 Jul",phase:"RECUPERACIÓN POST",totalKm:11,days:[
     W("w19d0","2026-06-28","Dom 28 Jun","Descanso post-carrera","DESCANSO",0,"El cuerpo lo hizo. Descansa. Hielo en piernas si hay inflamación."),
@@ -240,6 +240,81 @@ function buildWeeks(){return [
     W("w20d4","2026-07-09","Jue 9 Jul","Descanso","DESCANSO",0,"Descanso. Escucha el cuerpo."),
     W("w20d5","2026-07-10","Vie 10 Jul","Descanso","DESCANSO",0,"Descanso activo. Prepara el largo del sábado."),
     W("w20d6","2026-07-11","Sáb 11 Jul","Largo suave","SUAVE",8,"7:00/km. Trail suave. Disfruta. Sin objetivos de ritmo."),
+  ]},
+];}
+
+// ── Plan de recuperación ITB → Putaendo 10k (1 Ago 2026) ─────
+// Fines de semana alternados (ciclo de 2 semanas, sáb 4 jul bloqueado):
+// bloqueados 18 jul y 15 ago (largo/fuerza se adelanta a viernes, sábado pasa a ser Fuerza,
+// domingo siguiente admite trote suave 30min); libres 11 jul, 25 jul y 8 ago.
+// 1 ago (carrera) es excepción puntual: hija queda con su abuela.
+function buildTrail10kWeeks(){return [
+  {num:1,dates:"5–11 Jul",phase:"RECUPERACIÓN",totalKm:17,days:[
+    W("t1d0","2026-07-05","Dom 5 Jul","Trote suave (fin de semana alternado)","SUAVE",3,"El sábado 4 quedó bloqueado, pero el domingo puedes trotar 30min muy suave, plano. Tope dolor 2/10."),
+    F("t1d1","2026-07-06","Lun 6 Jul","Fuerza – Activación y propiocepción",3,"Base de la recuperación: cadera y equilibrio. Ningún ejercicio debe doler.",[
+      {name:"Clamshell",reps:"15 c/lado"},{name:"Elevación de cadera lateral",reps:"15 c/lado"},
+      {name:"Step-down asistido",reps:"5 c/lado ×2"},{name:"Balance a un pie (triángulo)",reps:"30 seg c/pie"},
+      {name:"Activación tibial",reps:"15 c/dir."}]),
+    W("t1d2","2026-07-07","Mar 7 Jul","Kinesio + trote suave","SUAVE",4,"🏥 Kinesio. Luego trote 20min muy suave, plano. Tope dolor 2/10 — si sube, camina."),
+    W("t1d3","2026-07-08","Mié 8 Jul","Bici (cross-training)","SUAVE",0,"🚲 30min bici Z1-Z2, cadencia suave. Cero impacto, mantiene el aeróbico."),
+    W("t1d4","2026-07-09","Jue 9 Jul","Kinesio + trote suave","SUAVE",4,"🏥 Kinesio. Luego trote 20min muy suave, plano. Mismo tope de dolor que el martes."),
+    W("t1d5","2026-07-10","Vie 10 Jul","Descanso","DESCANSO",0,"Descanso o movilidad 15min."),
+    W("t1d6","2026-07-11","Sáb 11 Jul","Trote suave plano","SUAVE",6,"Fin de semana libre. 6km en plano. Test de tolerancia. Detente si el dolor supera 2/10."),
+  ]},
+  {num:2,dates:"12–18 Jul",phase:"PROGRESIÓN",totalKm:26,days:[
+    W("t2d0","2026-07-12","Dom 12 Jul","Descanso","DESCANSO",0,"Descanso completo."),
+    W("t2d1","2026-07-13","Lun 13 Jul","Rodaje suave","SUAVE",5,"Este ciclo la fuerza se hace el sábado (fin de semana bloqueado). Trote suave, plano."),
+    W("t2d2","2026-07-14","Mar 14 Jul","Kinesio + trote suave","SUAVE",6,"🏥 Kinesio. Trote 30min suave, plano. Sube cadencia (+5–10%) y acorta la zancada."),
+    W("t2d3","2026-07-15","Mié 15 Jul","Bici o nado","SUAVE",0,"🚲 35min bici Z2 o nado suave 30min (evita patada fuerte si molesta la cadera)."),
+    W("t2d4","2026-07-16","Jue 16 Jul","Kinesio + trote suave","SUAVE",6,"🏥 Kinesio. Trote 30min suave, plano. Cadencia alta."),
+    W("t2d5","2026-07-17","Vie 17 Jul","Trote rodante suave","MEDIO",9,"Fin de semana bloqueado: el trote de la semana se adelanta a hoy. 9km en terreno rodante suave, sin bajadas pronunciadas. Ritmo cómodo."),
+    F("t2d6","2026-07-18","Sáb 18 Jul","Fuerza – Progresión de carga",4,"Sábado bloqueado para trote: aprovecha para la fuerza. Sube reps y agrega estocada asistida.",[
+      {name:"Clamshell con banda",reps:"20 c/lado"},{name:"Elevación de cadera lateral",reps:"20 c/lado"},
+      {name:"Step-down",reps:"8 c/lado"},{name:"Estocada asistida",reps:"10 c/lado"},
+      {name:"Balance a un pie",reps:"40 seg c/pie"}]),
+  ]},
+  {num:3,dates:"19–25 Jul",phase:"CONSOLIDACIÓN",totalKm:28,days:[
+    W("t3d0","2026-07-19","Dom 19 Jul","Trote suave (fin de semana alternado)","SUAVE",3,"Domingo de trote tras el sábado bloqueado: 30min muy suave, plano."),
+    F("t3d1","2026-07-20","Lun 20 Jul","Fuerza – Reintroduce pliometría",4,"Primer salto desde cajón a una pierna, bajo volumen. Aterrizaje suave y controlado.",[
+      {name:"Salto cajón 1 pierna",reps:"5 c/lado"},{name:"Step-down",reps:"10 c/lado"},
+      {name:"Estocada asistida",reps:"10 c/lado"},{name:"Balance a un pie con perturbación",reps:"40 seg c/pie"},
+      {name:"Clamshell con banda",reps:"20 c/lado"}]),
+    W("t3d2","2026-07-21","Mar 21 Jul","Kinesio + trote con cuestas","SUAVE",7,"🏥 Kinesio. Trote 35min con alguna cuesta suave. Primeras bajadas cortas y controladas."),
+    W("t3d3","2026-07-22","Mié 22 Jul","Bici o nado","SUAVE",0,"🚲/🏊 Cross-training 30–35min Z2."),
+    W("t3d4","2026-07-23","Jue 23 Jul","Kinesio + trote con cuestas","SUAVE",7,"🏥 Kinesio. Trote 35min, mismo perfil que el martes."),
+    W("t3d5","2026-07-24","Vie 24 Jul","Descanso","DESCANSO",0,"Descanso."),
+    W("t3d6","2026-07-25","Sáb 25 Jul","Simulacro trail","MEDIO",11,"Fin de semana libre. 11km con desnivel moderado y bajadas técnicas cortas. Cadencia alta, zancada corta. Evalúa dolor 24–48h después."),
+  ]},
+  {num:4,dates:"26 Jul – 1 Ago",phase:"TAPER + CARRERA",totalKm:18,days:[
+    W("t4d0","2026-07-26","Dom 26 Jul","Descanso","DESCANSO",0,"Descanso completo."),
+    F("t4d1","2026-07-27","Lun 27 Jul","Fuerza – Mantenimiento",2,"Reduce volumen. Activación, sin carga nueva. Prioriza sensaciones frescas.",[
+      {name:"Clamshell",reps:"15 c/lado"},{name:"Balance a un pie",reps:"30 seg c/pie"},
+      {name:"Activación de glúteo",reps:"15 c/lado"}]),
+    W("t4d2","2026-07-28","Mar 28 Jul","Kinesio + trote suave","SUAVE",5,"🏥 Kinesio. Trote 20–25min muy suave. Sin fatiga."),
+    W("t4d3","2026-07-29","Mié 29 Jul","Trote corto o descanso","SUAVE",3,"Trote corto muy suave o descanso, según sensaciones."),
+    W("t4d4","2026-07-30","Jue 30 Jul","Descanso","DESCANSO",0,"Descansa. Revisa equipo y logística de carrera."),
+    W("t4d5","2026-07-31","Vie 31 Jul","Descanso pre-carrera","DESCANSO",0,"Descanso completo. Carga de carbos, duerme temprano."),
+    W("t4d6","2026-08-01","Sáb 1 Ago 🏁","CARRERA Putaendo 10k","INTENSO",10,"600m D+. Sábado normalmente bloqueado, pero disponibilidad excepcional (tu hija queda con su abuela). Ritmo conservador, no all-out. Cadencia alta y zancada corta en bajadas técnicas/barrosas. Bastones si el terreno lo requiere. El objetivo es terminar sin dolor, no el tiempo."),
+  ]},
+  {num:5,dates:"2–8 Ago",phase:"RECUPERACIÓN POST",totalKm:10,days:[
+    W("t5d0","2026-08-02","Dom 2 Ago","Descanso post-carrera","DESCANSO",0,"El cuerpo lo hizo. Descansa. Hielo si hay inflamación, igual que después del 20k."),
+    W("t5d1","2026-08-03","Lun 3 Ago","Descanso activo","DESCANSO",0,"Caminata suave 20–30min. Sin correr."),
+    W("t5d2","2026-08-04","Mar 4 Ago","Kinesio – evaluación","DESCANSO",0,"🏥 Kinesio: evalúa la respuesta post-carrera. Sin trote hoy."),
+    W("t5d3","2026-08-05","Mié 5 Ago","Trote opcional muy suave","SUAVE",0,"Solo si no hay dolor: 15–20min muy suave. Ante la duda, descansa."),
+    W("t5d4","2026-08-06","Jue 6 Ago","Kinesio + trote suave","SUAVE",4,"🏥 Kinesio. Trote suave si las sensaciones son buenas."),
+    W("t5d5","2026-08-07","Vie 7 Ago","Descanso","DESCANSO",0,"Descanso."),
+    W("t5d6","2026-08-08","Sáb 8 Ago","Trote suave plano","SUAVE",6,"Fin de semana libre. Retoma el trote suave en plano, igual que la semana post-20k. Sin presión."),
+  ]},
+  {num:6,dates:"9–15 Ago",phase:"CIERRE RECUPERACIÓN",totalKm:30,days:[
+    W("t6d0","2026-08-09","Dom 9 Ago","Descanso","DESCANSO",0,"Descanso completo."),
+    W("t6d1","2026-08-10","Lun 10 Ago","Rodaje suave","SUAVE",7,"Este ciclo la fuerza se hace el sábado (fin de semana bloqueado). Trote suave, plano."),
+    W("t6d2","2026-08-11","Mar 11 Ago","Trote suave plano","SUAVE",7,"Trote suave plano. Evalúa que no quede ninguna molestia."),
+    W("t6d3","2026-08-12","Mié 12 Ago","Descanso o cross-training","DESCANSO",0,"Descanso activo o bici suave 30min."),
+    W("t6d4","2026-08-13","Jue 13 Ago","Trote suave","SUAVE",6,"Trote suave, plano o con leve ondulación."),
+    W("t6d5","2026-08-14","Vie 14 Ago","Trote con bajadas técnicas","MEDIO",10,"Fin de semana bloqueado: el checkpoint final se adelanta a hoy. Bajadas técnicas sin restricción. Si llegas sin dolor: recuperación completa 🎉."),
+    F("t6d6","2026-08-15","Sáb 15 Ago","Fuerza – Mantenimiento",2,"Sábado bloqueado para trote: kinesiología puede bajar a 1x/semana si todo sigue bien.",[
+      {name:"Clamshell",reps:"15 c/lado"},{name:"Balance a un pie",reps:"30 seg c/pie"},
+      {name:"Activación de glúteo",reps:"15 c/lado"}]),
   ]},
 ];}
 // ══════════════════════════════════════════════════

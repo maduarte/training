@@ -890,7 +890,7 @@ async function syncPush(){
   const content = JSON.stringify(payload, null, 2);
   const gistId = syncGetGistId();
   const headers = {
-    'Authorization': 'token ' + pat,
+    'Authorization': 'Bearer ' + pat,
     'Content-Type': 'application/json',
     'Accept': 'application/vnd.github.v3+json'
   };
@@ -917,6 +917,9 @@ async function syncPush(){
       });
     }
     json = await res.json();
+    if(res.status === 401) throw new Error('Token inválido o expirado. Genera un nuevo token en GitHub.');
+    if(res.status === 403) throw new Error('El token no tiene permiso de Gist. Activa el scope "gist" al crearlo.');
+    if(res.status === 404) throw new Error('Gist no encontrado. El ID puede ser incorrecto.');
     if(!res.ok) throw new Error(json.message || 'Error ' + res.status);
 
     localStorage.setItem('tw_sync_gist_id', json.id);
@@ -944,9 +947,12 @@ async function syncPull(){
 
   try {
     const res = await fetch('https://api.github.com/gists/' + gistId, {
-      headers: { 'Authorization': 'token ' + pat, 'Accept': 'application/vnd.github.v3+json' }
+      headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github.v3+json' }
     });
     const json = await res.json();
+    if(res.status === 401) throw new Error('Token inválido o expirado. Genera un nuevo token en GitHub.');
+    if(res.status === 403) throw new Error('El token no tiene permiso de Gist. Asegúrate de activar el scope "gist" al crearlo.');
+    if(res.status === 404) throw new Error('Gist no encontrado. Verifica el ID o sube primero desde el dispositivo principal.');
     if(!res.ok) throw new Error(json.message || 'Error ' + res.status);
 
     const fileContent = json.files?.[GIST_FILENAME]?.content;
@@ -1410,6 +1416,61 @@ function migrateStorage(){
     S.set('tw_races',existing);
     if(!S.get('tw_last_rid')) S.set('tw_last_rid', oldRid);
     console.log('[Migration] Torrencial 44k sembrada en tw_races');
+  }
+
+  // Step 3: Corrige la distancia de carrera (44km → 20km, cambio por indicación de kinesiólogo)
+  if(!S.get('tw_patched_race20k')){
+    const patchDay=(days)=>{
+      const d=days&&days.find(d=>d.id==='wRd5');
+      if(d&&d.km===44){ d.session='CARRERA 20km'; d.km=20; }
+    };
+    const races=S.get('tw_races')||[];
+    races.forEach(r=>{
+      if(r.id===oldRid){
+        const w=r.weeks.find(w=>w.days.some(d=>d.id==='wRd5'));
+        if(w){ patchDay(w.days); if(w.totalKm===50) w.totalKm=29; }
+      }
+    });
+    S.set('tw_races',races);
+    const savedWeeks=S.get(`tw_weeks_${oldRid}`);
+    if(savedWeeks){
+      const w=savedWeeks.find(w=>w.days.some(d=>d.id==='wRd5'));
+      if(w){ patchDay(w.days); if(w.totalKm===50) w.totalKm=29; }
+      S.set(`tw_weeks_${oldRid}`,savedWeeks);
+    }
+    S.set('tw_patched_race20k',true);
+    console.log('[Migration] Carrera corregida a 20km');
+  }
+
+  // Step 4: Seed carrera "Putaendo 10k" (1 Ago 2026) — plan de recuperación ITB post-Torrencial
+  const trail10kId='trail10k_ago2026';
+  const racesNow=S.get('tw_races')||[];
+  if(!racesNow.find(r=>r.id===trail10kId)){
+    const weeks=S.get(`tw_weeks_${trail10kId}`)||buildTrail10kWeeks();
+    racesNow.push({
+      id:trail10kId,
+      name:'Putaendo 10k',
+      date:'2026-08-01',
+      distance:10,
+      elevation:600,
+      defaultTitle:'⛰ Putaendo 10k',
+      weeks
+    });
+    S.set('tw_races',racesNow);
+    S.set('tw_last_rid', trail10kId);
+    console.log('[Migration] Putaendo 10k sembrada en tw_races');
+  }
+
+  // Step 5: Refresca el plan de Putaendo 10k a la versión que respeta los fines de semana
+  // alternados (no pisa tw_logs, que se guardan aparte por id de día)
+  if(!S.get('tw_patched_trail10k_weekends')){
+    const freshWeeks=buildTrail10kWeeks();
+    const races2=S.get('tw_races')||[];
+    const r=races2.find(r=>r.id===trail10kId);
+    if(r){ r.name='Putaendo 10k'; r.defaultTitle='⛰ Putaendo 10k'; r.weeks=freshWeeks; S.set('tw_races',races2); }
+    if(S.get(`tw_weeks_${trail10kId}`)) S.set(`tw_weeks_${trail10kId}`, freshWeeks);
+    S.set('tw_patched_trail10k_weekends',true);
+    console.log('[Migration] Putaendo 10k actualizada con fines de semana alternados');
   }
 }
 migrateStorage();
