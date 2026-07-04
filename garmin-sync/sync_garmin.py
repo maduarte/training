@@ -26,6 +26,9 @@ CONFIG_PATH = Path.home() / ".config" / "ncs-garmin-sync" / "config.json"
 GARMIN_CLI = shutil.which("garmin-connect") or str(Path.home() / ".local" / "bin" / "garmin-connect")
 LOOKBACK_BUFFER_DAYS = 3
 GITHUB_API = "https://api.github.com"
+ROUTE_TYPES = {"running", "trail_running"}
+ROUTE_BACKFILL_DAYS = 30  # solo trae ruta GPS (para el mapa) de actividades recientes
+ROUTE_MAX_POINTS = 150
 
 
 def load_config():
@@ -111,6 +114,37 @@ def activity_summary(a):
     }
 
 
+def fetch_route(activity_id):
+    """Extrae [lat,lon] decimados desde activities get --details.
+    La respuesta completa puede pesar >2MB (streams segundo a segundo), así que
+    solo se llama para actividades nuevas/recientes con GPS (ver ROUTE_BACKFILL_DAYS)
+    y el resultado se cachea en el Gist para no repetir la llamada.
+    """
+    details = run_cli("activities", "get", str(activity_id), "--details")
+    if not details:
+        return None
+    descriptors = details.get("metricDescriptors", [])
+    lat_idx = next((d["metricsIndex"] for d in descriptors if d["key"] == "directLatitude"), None)
+    lon_idx = next((d["metricsIndex"] for d in descriptors if d["key"] == "directLongitude"), None)
+    if lat_idx is None or lon_idx is None:
+        return None
+
+    points = []
+    for m in details.get("activityDetailMetrics", []):
+        vals = m.get("metrics", [])
+        lat = vals[lat_idx] if lat_idx < len(vals) else None
+        lon = vals[lon_idx] if lon_idx < len(vals) else None
+        if lat is not None and lon is not None:
+            points.append([round(lat, 5), round(lon, 5)])
+
+    if not points:
+        return None
+    if len(points) > ROUTE_MAX_POINTS:
+        step = len(points) / ROUTE_MAX_POINTS
+        points = [points[int(i * step)] for i in range(ROUTE_MAX_POINTS)]
+    return points
+
+
 def main():
     cfg = load_config()
     token = cfg["github_token"]
@@ -137,8 +171,27 @@ def main():
     by_id = {a["garminActivityId"]: a for a in existing.get("activities", [])}
     for a in activities:
         summary = activity_summary(a)
-        if summary["garminActivityId"] is not None:
-            by_id[summary["garminActivityId"]] = summary
+        aid = summary["garminActivityId"]
+        if aid is None:
+            continue
+        prev = by_id.get(aid)
+        if prev and prev.get("route"):
+            summary["route"] = prev["route"]  # no repetir el fetch pesado
+        by_id[aid] = summary
+
+    route_cutoff = (datetime.now(timezone.utc) - timedelta(days=ROUTE_BACKFILL_DAYS)).date().isoformat()
+    fetched_routes = 0
+    for summary in by_id.values():
+        if summary.get("route") or not summary.get("hasPolyline"):
+            continue
+        if summary.get("type") not in ROUTE_TYPES:
+            continue
+        if (summary.get("date") or "") < route_cutoff:
+            continue
+        route = fetch_route(summary["garminActivityId"])
+        if route:
+            summary["route"] = route
+            fetched_routes += 1
 
     payload = {
         "lastSynced": datetime.now(timezone.utc).isoformat(),
@@ -159,7 +212,7 @@ def main():
 
     print(
         f"Sincronizadas {len(activities)} actividades nuevas/actualizadas. "
-        f"Total en caché: {len(payload['activities'])}."
+        f"Rutas GPS nuevas: {fetched_routes}. Total en caché: {len(payload['activities'])}."
     )
 
 
