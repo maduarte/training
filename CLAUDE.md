@@ -6,7 +6,7 @@ Archivo de contexto para traspaso a Claude Code. Lee esto completo antes de toca
 
 ## Qué es esta app
 
-PWA (Progressive Web App) para entrenamiento de trail running. El usuario principal es **Mauro** (maduarte44), preparándose para el **Torrencial 44k** (junio 2026, ~19 semanas de plan). La app vive en **https://maduarte44.github.io** (GitHub Pages, rama `main`).
+PWA (Progressive Web App) para entrenamiento de trail running. El usuario principal es **Mauro** (cuenta GitHub `maduarte`, antes `maduarte44` — la cuenta fue renombrada), preparándose para el **Torrencial 44k** (junio 2026, ~19 semanas de plan). La app vive en **https://maduarte.github.io/training/** (GitHub Pages, rama `main`).
 
 La app es **multi-atleta**: en la pantalla inicial el usuario elige su perfil y carrera antes de entrar al calendario.
 
