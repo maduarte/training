@@ -11,13 +11,13 @@
         <string>/Users/mauro/Library/CloudStorage/Dropbox/Programacion/GitHub/training/garmin-sync/sync_garmin.py</string>
     </array>
 
-    <!-- Corre todos los días a las 08:00. Si el Mac estaba dormido/apagado,
+    <!-- Corre todos los días a las 11:00. Si el Mac estaba dormido/apagado,
          launchd lo corre apenas despierta (no es garantizado, pero el script
          es idempotente así que un día salteado se recupera solo). -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
-        <integer>8</integer>
+        <integer>11</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>

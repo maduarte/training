@@ -55,7 +55,7 @@ desnivel, zonas de HR y distancia/duración).
 
 ## 5. Instalar el launchd agent (correr 1x/día automáticamente)
 
-Ya instalado y cargado (corre todos los días a las 08:00):
+Ya instalado y cargado (corre todos los días a las 11:00):
 
 ```bash
 cp com.ncs.garminsync.plist ~/Library/LaunchAgents/
@@ -68,7 +68,7 @@ Para revisar logs: `cat /tmp/ncs-garmin-sync.log`
 
 Para desinstalar: `launchctl unload ~/Library/LaunchAgents/com.ncs.garminsync.plist`
 
-Para forzar una corrida manual sin esperar a las 08:00:
+Para forzar una corrida manual sin esperar a las 11:00:
 `launchctl start com.ncs.garminsync` (revisa el log después)
 
 ## Notas
