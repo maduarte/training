@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ncs.garminsync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/mauro/Library/CloudStorage/Dropbox/Programacion/GitHub/training/garmin-sync/sync_garmin.py</string>
+    </array>
+
+    <!-- Corre todos los días a las 08:00. Si el Mac estaba dormido/apagado,
+         launchd lo corre apenas despierta (no es garantizado, pero el script
+         es idempotente así que un día salteado se recupera solo). -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>8</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/ncs-garmin-sync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/ncs-garmin-sync.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
