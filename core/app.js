@@ -1,6 +1,11 @@
 // ── Feature Flags ────────────────────────────────────────────
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
+// Gist de solo-lectura que alimenta garmin-sync/sync_garmin.py (corre 1x/día en el Mac vía launchd).
+// No requiere PAT: los gists secretos de GitHub son legibles con el ID sin autenticación.
+const GARMIN_GIST_ID = 'dcc4060fab614d7348188f25dd68d1de';
+const GARMIN_FILENAME = 'garmin-activities.json';
+
 let st={
   athleteId:null,raceId:null,raceDate:null,weeks:[],
   weekIdx:0,tab:'cal',reactions:{},logs:{},selected:null,modalDay:null,
@@ -386,6 +391,97 @@ function calcPace(){
   } else {el.textContent='';el.className='m-pace';}
 }
 
+// ══════════════════════════════════════════════════
+// GARMIN CACHE (solo lectura — ver garmin-sync/)
+// ══════════════════════════════════════════════════
+let GARMIN_BY_DATE = null; // {date: [activity,...]}
+
+async function loadGarminCache(){
+  try{
+    const res = await fetch(`https://api.github.com/gists/${GARMIN_GIST_ID}`);
+    if(!res.ok) return;
+    const gist = await res.json();
+    const raw = gist.files?.[GARMIN_FILENAME]?.content;
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    const byDate = {};
+    (data.activities||[]).forEach(a=>{
+      if(!a.date) return;
+      (byDate[a.date] = byDate[a.date]||[]).push(a);
+    });
+    GARMIN_BY_DATE = byDate;
+    if(st.modalDay) renderGarminSection(st.modalDay); // modal ya abierto esperando datos
+  }catch(e){ console.warn('[Garmin] caché no disponible', e); }
+}
+loadGarminCache();
+
+function garminActivityFor(day){
+  const matches = GARMIN_BY_DATE?.[day.date];
+  if(!matches?.length) return null;
+  // Si hay varias actividades ese día, prioriza la de mayor duración (sesión principal).
+  return matches.slice().sort((a,b)=>(b.durationSec||0)-(a.durationSec||0))[0];
+}
+
+function fmtHMS(sec){
+  if(!sec)return '';
+  sec=Math.round(sec);
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  return h>0?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;
+}
+
+function renderGarminRoute(route){
+  if(!route||route.length<2)return '';
+  const lats=route.map(p=>p[0]), lons=route.map(p=>p[1]);
+  const minLat=Math.min(...lats), maxLat=Math.max(...lats);
+  const minLon=Math.min(...lons), maxLon=Math.max(...lons);
+  const w=280,h=140,pad=6;
+  const lonScale=Math.cos((minLat+maxLat)/2*Math.PI/180)||1;
+  const spanX=(maxLon-minLon)*lonScale||0.0001, spanY=(maxLat-minLat)||0.0001;
+  const scale=Math.min((w-2*pad)/spanX,(h-2*pad)/spanY);
+  const midLat=(minLat+maxLat)/2, midLon=(minLon+maxLon)/2;
+  const pts=route.map(([lat,lon])=>{
+    const x=w/2+(lon-midLon)*lonScale*scale;
+    const y=h/2-(lat-midLat)*scale;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" class="g-route" preserveAspectRatio="xMidYMid meet">
+    <polyline points="${pts}" fill="none" stroke="#52c9a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function renderGarminHrZones(z){
+  if(!z)return '';
+  const zones=[['z1','#3a3a4a'],['z2','#52c9a0'],['z3','#f5b731'],['z4','#f4634a'],['z5','#a020f0']];
+  const total=zones.reduce((a,[k])=>a+(z[k]||0),0);
+  if(!total)return '';
+  const bars=zones.map(([k,color])=>{
+    const pct=(z[k]||0)/total*100;
+    return pct>0?`<span style="width:${pct.toFixed(1)}%;background:${color}"></span>`:'';
+  }).join('');
+  return `<div class="g-hrzones">${bars}</div>`;
+}
+
+function renderGarminSection(day){
+  const el=document.getElementById('m-garmin');
+  if(!el||st.modalDay?.id!==day.id)return;
+  const a=garminActivityFor(day);
+  if(!a){el.innerHTML='';return;}
+  el.innerHTML=`
+    <div class="g-card">
+      <div class="g-card-hdr">⌚ ${escHtml(a.name||'Actividad Garmin')}${a.locationName?` · ${escHtml(a.locationName)}`:''}</div>
+      <div class="g-stats">
+        <div><b>${a.distanceKm}</b> km</div>
+        <div><b>${fmtHMS(a.durationSec)}</b></div>
+        ${a.avgPaceSecPerKm?`<div><b>${fmtPace(a.avgPaceSecPerKm)}</b> /km</div>`:''}
+        ${a.avgHr?`<div><b>${Math.round(a.avgHr)}</b>/${Math.round(a.maxHr||0)} bpm</div>`:''}
+        ${a.avgCadenceSpm?`<div><b>${Math.round(a.avgCadenceSpm)}</b> spm</div>`:''}
+        ${a.elevGainM?`<div>+<b>${Math.round(a.elevGainM)}</b>m</div>`:''}
+      </div>
+      ${renderGarminHrZones(a.hrZonesSec)}
+      ${renderGarminRoute(a.route)}
+    </div>`;
+}
+
 function openModal(i){
   const day=st.weeks[st.weekIdx].days[i];
   st.modalDay=day;
@@ -409,6 +505,8 @@ function openModal(i){
       day.km>0?`<span class="m-km" style="color:${ts.tx}">${day.km} km</span>`+
         (st.pacesSet&&day.type!=='DESCANSO'?`<span class="m-km" style="color:#7070a0;font-size:12px">· ${fmtDur(estSeconds(day))}</span>`:''):'');
   document.getElementById('m-desc').textContent=day.desc;
+  document.getElementById('m-garmin').innerHTML='';
+  renderGarminSection(day);
 
   // Body: FUERZA vs run
   const body=document.getElementById('m-body');

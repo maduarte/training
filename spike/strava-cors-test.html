@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Spike: Strava OAuth + CORS test</title>
+<style>
+  body{font-family:monospace;max-width:640px;margin:40px auto;padding:0 16px;background:#0b0f0d;color:#e6f2ea}
+  input{width:100%;padding:8px;margin:6px 0;background:#111;color:#e6f2ea;border:1px solid #333}
+  button{padding:10px 16px;background:#4caf50;color:#000;border:none;cursor:pointer;font-weight:bold}
+  pre{background:#111;padding:12px;overflow-x:auto;white-space:pre-wrap}
+  .ok{color:#4caf50}
+  .err{color:#f4634a}
+  label{font-size:12px;opacity:.8}
+</style>
+</head>
+<body>
+<h2>Spike: ¿Strava permite CORS en /oauth/token?</h2>
+<p>Esta página NO se sube a producción. Es solo para responder una pregunta: ¿podemos hacer login de Strava
+100% desde el navegador (sin backend), o necesitamos un proxy para el intercambio de tokens?</p>
+
+<h3>Paso 1 — Crea tu app en Strava</h3>
+<ol>
+  <li>Ve a <b>strava.com/settings/api</b> y crea una aplicación.</li>
+  <li>"Authorization Callback Domain": pon exactamente <code>localhost</code> (sin http, sin puerto).</li>
+  <li>Copia tu <b>Client ID</b> y <b>Client Secret</b> abajo (quedan solo en tu navegador, en la URL/memoria de esta página — no se envían a ningún lado más que a Strava).</li>
+</ol>
+
+<label>Client ID</label>
+<input id="cid" placeholder="123456">
+<label>Client Secret</label>
+<input id="csec" placeholder="tu client secret" type="password">
+
+<h3>Paso 2 — Autoriza</h3>
+<button onclick="startAuth()">1. Ir a Strava a autorizar</button>
+
+<h3>Paso 3 — Intercambia el código (esto es lo que estamos probando)</h3>
+<button onclick="exchangeToken()">2. Intercambiar código por token (fetch directo)</button>
+
+<pre id="log">Esperando...</pre>
+
+<script>
+const REDIRECT = 'http://localhost:8080/spike/strava-cors-test.html';
+const log = (msg, cls) => {
+  const el = document.getElementById('log');
+  el.innerHTML = (cls ? `<span class="${cls}">${msg}</span>` : msg);
+};
+
+function startAuth(){
+  const cid = document.getElementById('cid').value.trim();
+  if(!cid){ alert('Pon tu Client ID primero'); return; }
+  sessionStorage.setItem('spike_cid', cid);
+  sessionStorage.setItem('spike_csec', document.getElementById('csec').value.trim());
+  const url = `https://www.strava.com/oauth/authorize?client_id=${cid}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT)}&approval_prompt=auto&scope=activity:read_all`;
+  location.href = url;
+}
+
+async function exchangeToken(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const cid = sessionStorage.getItem('spike_cid');
+  const csec = sessionStorage.getItem('spike_csec');
+  if(!code){ log('No hay ?code= en la URL. Corre el Paso 2 primero (te va a redirigir de vuelta acá con el código).', 'err'); return; }
+  if(!cid || !csec){ log('Faltan client_id/secret guardados de este intento. Vuelve a llenar los campos y repite el Paso 2.', 'err'); return; }
+
+  log('Haciendo fetch directo a https://www.strava.com/oauth/token ...');
+  try{
+    const res = await fetch('https://www.strava.com/oauth/token', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ client_id: cid, client_secret: csec, code, grant_type: 'authorization_code' })
+    });
+    const json = await res.json();
+    if(res.ok){
+      log('✅ FUNCIONA. CORS permite el fetch directo desde el navegador.\nNo hace falta backend/proxy para esto.\n\n' + JSON.stringify({...json, access_token:'(oculto)', refresh_token:'(oculto)'}, null, 2), 'ok');
+    } else {
+      log('La request llegó (no fue bloqueada por CORS) pero Strava respondió con error:\n' + JSON.stringify(json, null, 2), 'err');
+    }
+  }catch(e){
+    log('❌ BLOQUEADO. Esto casi seguro es un error de CORS (revisa la consola del navegador para confirmar el mensaje exacto).\nSi es CORS, necesitamos un proxy (ej. Cloudflare Worker) para este paso.\n\n' + e.message, 'err');
+  }
+}
+</script>
+</body>
+</html>

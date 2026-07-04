@@ -126,6 +126,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 #m-desc{font-size:14px;color:#aaa;line-height:1.65;padding:11px 12px;background:#111;border-radius:10px;border-left:3px solid #1e1e2e;margin-bottom:14px}
 .m-sec{font-size:10px;font-weight:700;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:9px}
 
+/* Garmin activity card (ver core/app.js renderGarminSection) */
+.g-card{background:#0c1310;border:1px solid #1c2a22;border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.g-card-hdr{font-size:11px;font-weight:700;color:#52c9a0;letter-spacing:.5px;margin-bottom:9px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-stats{display:flex;flex-wrap:wrap;gap:8px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#9db3a6;margin-bottom:10px}
+.g-stats b{color:#e0e0f0;font-weight:700}
+.g-hrzones{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:10px;background:#1a1a22}
+.g-hrzones span{display:block;height:100%}
+.g-route{width:100%;height:auto;max-height:150px;display:block;background:#081008;border-radius:8px}
+
 /* Run log fields */
 .m-time-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
 .m-dist-row{margin-bottom:10px}
