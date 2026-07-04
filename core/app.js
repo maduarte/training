@@ -1461,16 +1461,53 @@ function migrateStorage(){
     console.log('[Migration] Putaendo 10k sembrada en tw_races');
   }
 
-  // Step 5: Refresca el plan de Putaendo 10k a la versión que respeta los fines de semana
-  // alternados (no pisa tw_logs, que se guardan aparte por id de día)
-  if(!S.get('tw_patched_trail10k_weekends')){
+  // Step 5: Refresca el plan de Putaendo 10k a semanas lunes-domingo (empieza 6 jul,
+  // el 5 jul pasó al cierre de Torrencial). No pisa tw_logs (se guardan aparte por id de día).
+  if(!S.get('tw_patched_trail10k_mondayweeks')){
     const freshWeeks=buildTrail10kWeeks();
     const races2=S.get('tw_races')||[];
     const r=races2.find(r=>r.id===trail10kId);
     if(r){ r.name='Putaendo 10k'; r.defaultTitle='⛰ Putaendo 10k'; r.weeks=freshWeeks; S.set('tw_races',races2); }
-    if(S.get(`tw_weeks_${trail10kId}`)) S.set(`tw_weeks_${trail10kId}`, freshWeeks);
-    S.set('tw_patched_trail10k_weekends',true);
-    console.log('[Migration] Putaendo 10k actualizada con fines de semana alternados');
+    S.set(`tw_weeks_${trail10kId}`, freshWeeks);
+    S.set('tw_patched_trail10k_mondayweeks',true);
+    console.log('[Migration] Putaendo 10k actualizada a semanas lunes-domingo');
+  }
+
+  // Step 6: Convierte el cierre de Torrencial 44k a semanas lunes-domingo SIN tocar las
+  // semanas 1-18 (por si tienen swaps manuales): 28 jun se suma a la semana de carrera,
+  // 4-5 jul quedan como fuerza/equilibrio + bici suave, y se elimina la semana 5-11 jul
+  // (ahora vive en Putaendo).
+  if(!S.get('tw_patched_torrencial_mondayweeks')){
+    const patchTorrencialWeeks=(weeks)=>{
+      const raceWeek=weeks.find(w=>w.num==='🏁');
+      if(raceWeek && !raceWeek.days.find(d=>d.id==='wRd6')){
+        raceWeek.days.push(W("wRd6","2026-06-28","Dom 28 Jun","Descanso post-carrera","DESCANSO",0,"El cuerpo lo hizo. Descansa. Hielo en piernas si hay inflamación."));
+        raceWeek.dates="22–28 Jun";
+      }
+      const week19=weeks.find(w=>w.num===19);
+      if(week19){
+        week19.days=week19.days.filter(d=>d.id!=='w19d0');
+        const d6=week19.days.find(d=>d.id==='w19d6');
+        if(d6){
+          d6.session='Fuerza – Recuperación: fuerza y equilibrio'; d6.type='FUERZA'; d6.km=0; d6.sets=3;
+          d6.desc='Sesión de recuperación activa. Ningún ejercicio debe generar dolor.';
+          d6.exercises=[{name:"Clamshell",reps:"15 c/lado"},{name:"Balance a un pie (triángulo)",reps:"30 seg c/pie"},
+            {name:"Activación de glúteo",reps:"15 c/lado"},{name:"Step-down asistido",reps:"5 c/lado"}];
+        }
+        if(!week19.days.find(d=>d.id==='w19d7')){
+          week19.days.push(W("w19d7","2026-07-05","Dom 5 Jul","Bici suave","SUAVE",0,"🚲 30min bici suave, cadencia cómoda. Cero impacto."));
+        }
+        week19.dates="29 Jun – 5 Jul"; week19.totalKm=3;
+      }
+      return weeks.filter(w=>w.num!==20);
+    };
+    const races3=S.get('tw_races')||[];
+    const r=races3.find(r=>r.id===oldRid);
+    if(r){ r.weeks=patchTorrencialWeeks(r.weeks); S.set('tw_races',races3); }
+    const savedWeeks3=S.get(`tw_weeks_${oldRid}`);
+    if(savedWeeks3) S.set(`tw_weeks_${oldRid}`, patchTorrencialWeeks(savedWeeks3));
+    S.set('tw_patched_torrencial_mondayweeks',true);
+    console.log('[Migration] Torrencial 44k: cierre convertido a semanas lunes-domingo');
   }
 }
 migrateStorage();
