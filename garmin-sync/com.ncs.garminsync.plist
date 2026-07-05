@@ -5,10 +5,16 @@
     <key>Label</key>
     <string>com.ncs.garminsync</string>
 
+    <!-- OJO: apunta a ~/.local/share/ncs-garmin-sync/, NO a la carpeta del repo (Dropbox).
+         launchd corre como daemon sin sesión de usuario y macOS (TCC) le niega el acceso
+         a rutas dentro de ~/Library/CloudStorage/Dropbox/... con "Operation not permitted",
+         aunque el mismo script funcione perfecto corrido a mano en una terminal.
+         Tras editar garmin-sync/sync_garmin.py en el repo, hay que volver a copiarlo:
+         cp garmin-sync/sync_garmin.py ~/.local/share/ncs-garmin-sync/sync_garmin.py -->
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/mauro/Library/CloudStorage/Dropbox/Programacion/GitHub/training/garmin-sync/sync_garmin.py</string>
+        <string>/Users/mauro/.local/share/ncs-garmin-sync/sync_garmin.py</string>
     </array>
 
     <!-- Corre todos los días a las 11:00. Si el Mac estaba dormido/apagado,
