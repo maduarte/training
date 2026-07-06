@@ -134,9 +134,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .g-stats b{color:#e0e0f0;font-weight:700}
 .g-card-row{display:flex;gap:10px;align-items:center}
 .g-hrzones-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
-.g-hrzones-donut{width:60px;height:60px}
-.g-hrzones-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px;font-size:8px;color:#8a8aa0;letter-spacing:.3px;max-width:70px}
-.g-hrzone-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:2px;vertical-align:middle}
+.g-hrzones-title{font-size:9px;font-weight:700;color:#8a8aa0;letter-spacing:1px;text-transform:uppercase}
+.g-hrzones-dots{display:flex;gap:4px}
+.g-hrzones-dots span{display:block;width:7px;height:7px;border-radius:50%}
+.g-hrzones-donut{width:56px;height:56px}
 .g-route{flex:1;min-width:0;width:100%;height:auto;max-height:150px;display:block;background:#081008;border-radius:8px}
 
 /* Run log fields */

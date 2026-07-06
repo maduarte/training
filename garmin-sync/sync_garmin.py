@@ -98,6 +98,7 @@ def activity_summary(a):
         "maxCadenceSpm": a.get("maxRunningCadenceInStepsPerMinute"),
         "elevGainM": a.get("elevationGain"),
         "elevLossM": a.get("elevationLoss"),
+        "calories": a.get("calories"),
         "avgPaceSecPerKm": (
             round(1000 / a["averageSpeed"]) if a.get("averageSpeed") else None
         ),

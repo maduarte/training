@@ -477,26 +477,31 @@ function renderGarminRoute(route){
   return `<svg viewBox="0 0 ${w} ${h}" class="g-route" preserveAspectRatio="xMidYMid meet">${body}</svg>`;
 }
 
+// Paleta "Neón" (opción F aprobada): celeste→violeta→fucsia, saturación 100%, luminosidad 56%.
+// Distinta de la escala verde-amarillo-rojo del mapa de desnivel.
+const HR_ZONE_COLORS=['hsl(200,100%,56%)','hsl(235,100%,56%)','hsl(270,100%,56%)','hsl(295,100%,56%)','hsl(320,100%,56%)'];
+
 function renderGarminHrZones(z){
   if(!z)return '';
-  const zones=[['z1','#3a3a4a'],['z2','#52c9a0'],['z3','#f5b731'],['z4','#f4634a'],['z5','#a020f0']];
+  const zones=['z1','z2','z3','z4','z5'].map((k,i)=>[k,HR_ZONE_COLORS[i]]);
   const total=zones.reduce((a,[k])=>a+(z[k]||0),0);
   if(!total)return '';
-  const r=24,cx=30,cy=30,C=2*Math.PI*r;
+  const r=24,cx=28,cy=28,C=2*Math.PI*r;
   let offset=0;
   const arcs=zones.map(([k,color])=>{
     const frac=(z[k]||0)/total;
     if(frac<=0)return '';
     const len=frac*C;
     const dash=`${len.toFixed(2)} ${(C-len).toFixed(2)}`;
-    const arc=`<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${color}" stroke-width="9" stroke-dasharray="${dash}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    const arc=`<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${color}" stroke-width="8" stroke-dasharray="${dash}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
     offset+=len;
     return arc;
   }).join('');
-  const legend=zones.map(([k,color])=>`<span class="g-hrzone-dot" style="background:${color}"></span>${k.toUpperCase()}`).join(' ');
+  const dots=zones.map(([k,color])=>`<span style="background:${color}"></span>`).join('');
   return `<div class="g-hrzones-wrap">
-    <svg viewBox="0 0 60 60" class="g-hrzones-donut">${arcs}</svg>
-    <div class="g-hrzones-legend">${legend}</div>
+    <div class="g-hrzones-title">Zonas</div>
+    <div class="g-hrzones-dots">${dots}</div>
+    <svg viewBox="0 0 56 56" class="g-hrzones-donut">${arcs}</svg>
   </div>`;
 }
 
@@ -516,8 +521,11 @@ function renderGarminSection(day){
       <div class="g-stats">
         ${a.avgPaceSecPerKm?`<div><b>${fmtPace(a.avgPaceSecPerKm)}</b> /km</div>`:''}
         ${a.gapSecPerKm?`<div title="Ritmo equivalente en plano">🏔<b>${fmtPace(a.gapSecPerKm)}</b> /km</div>`:''}
+      </div>
+      <div class="g-stats">
         ${a.avgHr?`<div><b>${Math.round(a.avgHr)}</b>/${Math.round(a.maxHr||0)} bpm</div>`:''}
         ${a.avgCadenceSpm?`<div><b>${Math.round(a.avgCadenceSpm)}</b> spm</div>`:''}
+        ${a.calories?`<div><b>${Math.round(a.calories)}</b> kcal</div>`:''}
       </div>
       <div class="g-card-row">
         ${renderGarminHrZones(a.hrZonesSec)}
