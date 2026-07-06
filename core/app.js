@@ -129,6 +129,7 @@ function launchApp(aid,rid){
   document.getElementById('pace-banner').classList.toggle('show',!st.pacesSet);
   // Auto-open modal on first launch (slight delay for UX)
   if(!st.pacesSet)setTimeout(()=>openPaceModal(false),700);
+  autoFillGarminLogs();
 }
 
 // ══════════════════════════════════════════════════
@@ -411,6 +412,7 @@ async function loadGarminCache(){
     });
     GARMIN_BY_DATE = byDate;
     if(st.modalDay) renderGarminSection(st.modalDay); // modal ya abierto esperando datos
+    autoFillGarminLogs();
   }catch(e){ console.warn('[Garmin] caché no disponible', e); }
 }
 loadGarminCache();
@@ -420,6 +422,37 @@ function garminActivityFor(day){
   if(!matches?.length) return null;
   // Si hay varias actividades ese día, prioriza la de mayor duración (sesión principal).
   return matches.slice().sort((a,b)=>(b.durationSec||0)-(a.durationSec||0))[0];
+}
+
+function garminLogEntry(a){
+  const totalSec=Math.round(a.durationSec||0);
+  if(!totalSec)return null;
+  const th=Math.floor(totalSec/3600), tm=Math.floor((totalSec%3600)/60), ts=totalSec%60;
+  const time=th>0?`${th}:${String(tm).padStart(2,'0')}:${String(ts).padStart(2,'0')}`:`${tm}:${String(ts).padStart(2,'0')}`;
+  const pace=a.avgPaceSecPerKm?`${fmtPace(a.avgPaceSecPerKm)}/km`:'';
+  return {th,tm,ts,distance:a.distanceKm||null,time,pace,fromGarmin:true};
+}
+
+// Completa automáticamente el registro de entrenamiento real en los días que
+// tienen una actividad de Garmin matcheada, sin pisar un log ya existente
+// (manual o auto-completado antes) — así nunca se sobreescribe algo que el
+// usuario haya editado a mano.
+function autoFillGarminLogs(){
+  if(!GARMIN_BY_DATE||!st.weeks?.length)return;
+  let changed=false;
+  st.weeks.forEach(w=>w.days.forEach(day=>{
+    if(st.logs[day.id])return;
+    const a=garminActivityFor(day);
+    if(!a)return;
+    const entry=garminLogEntry(a);
+    if(!entry)return;
+    st.logs={...st.logs,[day.id]:entry};
+    changed=true;
+  }));
+  if(changed){
+    S.set(`tw_logs_${st.raceId}`,st.logs);
+    renderCal();
+  }
 }
 
 function fmtHMS(sec){
@@ -588,7 +621,7 @@ function openModal(i){
     else{const est=estSeconds(day);th=Math.floor(est/3600)||'';tm=Math.floor((est%3600)/60)||'';ts2=est%60||'';}
     const dist=log?.distance!==undefined?log.distance:(day.km>0?day.km:'');
     body.innerHTML=`
-      <div class="m-sec">Registrar entrenamiento real</div>
+      <div class="m-sec">Registrar entrenamiento real${log?.fromGarmin?' · <span style="color:#52c9a0;text-transform:none;letter-spacing:0">⌚ auto desde Garmin</span>':''}</div>
       <div class="m-lbl">TIEMPO REAL</div>
       <div class="m-time-row">
         <div><div class="m-lbl-sub">hh</div><input class="m-input" id="m-th" type="number" min="0" max="23" value="${th}" inputmode="numeric" oninput="calcPace()"></div>
