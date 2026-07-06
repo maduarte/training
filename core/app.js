@@ -429,6 +429,21 @@ function fmtHMS(sec){
   return h>0?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;
 }
 
+// Escala verde→amarillo→rojo (mismos tonos que TYPE.SUAVE/MEDIO/INTENSO) para
+// pintar la ruta según elevación relativa (bajo→alto) de esa actividad.
+function elevColor(t){
+  const stops=[[0,[82,201,160]],[0.5,[245,183,49]],[1,[244,99,74]]];
+  for(let i=0;i<stops.length-1;i++){
+    const [t0,c0]=stops[i],[t1,c1]=stops[i+1];
+    if(t<=t1||i===stops.length-2){
+      const f=Math.max(0,Math.min(1,(t-t0)/((t1-t0)||1)));
+      const r=Math.round(c0[0]+(c1[0]-c0[0])*f),g=Math.round(c0[1]+(c1[1]-c0[1])*f),b=Math.round(c0[2]+(c1[2]-c0[2])*f);
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+  return '#52c9a0';
+}
+
 function renderGarminRoute(route){
   if(!route||route.length<2)return '';
   const lats=route.map(p=>p[0]), lons=route.map(p=>p[1]);
@@ -439,14 +454,27 @@ function renderGarminRoute(route){
   const spanX=(maxLon-minLon)*lonScale||0.0001, spanY=(maxLat-minLat)||0.0001;
   const scale=Math.min((w-2*pad)/spanX,(h-2*pad)/spanY);
   const midLat=(minLat+maxLat)/2, midLon=(minLon+maxLon)/2;
-  const pts=route.map(([lat,lon])=>{
-    const x=w/2+(lon-midLon)*lonScale*scale;
-    const y=h/2-(lat-midLat)*scale;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  return `<svg viewBox="0 0 ${w} ${h}" class="g-route" preserveAspectRatio="xMidYMid meet">
-    <polyline points="${pts}" fill="none" stroke="#52c9a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
+  const toXY=([lat,lon])=>[
+    (w/2+(lon-midLon)*lonScale*scale).toFixed(1),
+    (h/2-(lat-midLat)*scale).toFixed(1)
+  ];
+  const elevs=route.map(p=>p[2]).filter(e=>e!=null);
+  const hasElev=elevs.length>route.length*0.8; // suficientes puntos con elevación
+  let body;
+  if(hasElev){
+    const minE=Math.min(...elevs), maxE=Math.max(...elevs), spanE=(maxE-minE)||1;
+    body=route.slice(1).map((p,i)=>{
+      const prev=route[i];
+      const [x1,y1]=toXY(prev), [x2,y2]=toXY(p);
+      const e=p[2]!=null?p[2]:prev[2];
+      const t=e!=null?(e-minE)/spanE:0.5;
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${elevColor(t)}" stroke-width="2.5" stroke-linecap="round"/>`;
+    }).join('');
+  } else {
+    const pts=route.map(toXY).map(([x,y])=>`${x},${y}`).join(' ');
+    body=`<polyline points="${pts}" fill="none" stroke="#52c9a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" class="g-route" preserveAspectRatio="xMidYMid meet">${body}</svg>`;
 }
 
 function renderGarminHrZones(z){
@@ -454,11 +482,22 @@ function renderGarminHrZones(z){
   const zones=[['z1','#3a3a4a'],['z2','#52c9a0'],['z3','#f5b731'],['z4','#f4634a'],['z5','#a020f0']];
   const total=zones.reduce((a,[k])=>a+(z[k]||0),0);
   if(!total)return '';
-  const bars=zones.map(([k,color])=>{
-    const pct=(z[k]||0)/total*100;
-    return pct>0?`<span style="width:${pct.toFixed(1)}%;background:${color}"></span>`:'';
+  const r=24,cx=30,cy=30,C=2*Math.PI*r;
+  let offset=0;
+  const arcs=zones.map(([k,color])=>{
+    const frac=(z[k]||0)/total;
+    if(frac<=0)return '';
+    const len=frac*C;
+    const dash=`${len.toFixed(2)} ${(C-len).toFixed(2)}`;
+    const arc=`<circle r="${r}" cx="${cx}" cy="${cy}" fill="none" stroke="${color}" stroke-width="9" stroke-dasharray="${dash}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset+=len;
+    return arc;
   }).join('');
-  return `<div class="g-hrzones">${bars}</div>`;
+  const legend=zones.map(([k,color])=>`<span class="g-hrzone-dot" style="background:${color}"></span>${k.toUpperCase()}`).join(' ');
+  return `<div class="g-hrzones-wrap">
+    <svg viewBox="0 0 60 60" class="g-hrzones-donut">${arcs}</svg>
+    <div class="g-hrzones-legend">${legend}</div>
+  </div>`;
 }
 
 function renderGarminSection(day){
@@ -471,14 +510,19 @@ function renderGarminSection(day){
       <div class="g-card-hdr">⌚ ${escHtml(a.name||'Actividad Garmin')}${a.locationName?` · ${escHtml(a.locationName)}`:''}</div>
       <div class="g-stats">
         <div><b>${a.distanceKm}</b> km</div>
+        ${a.elevGainM?`<div>+<b>${Math.round(a.elevGainM)}</b>m</div>`:''}
         <div><b>${fmtHMS(a.durationSec)}</b></div>
+      </div>
+      <div class="g-stats">
         ${a.avgPaceSecPerKm?`<div><b>${fmtPace(a.avgPaceSecPerKm)}</b> /km</div>`:''}
+        ${a.gapSecPerKm?`<div title="Ritmo equivalente en plano">🏔<b>${fmtPace(a.gapSecPerKm)}</b> /km</div>`:''}
         ${a.avgHr?`<div><b>${Math.round(a.avgHr)}</b>/${Math.round(a.maxHr||0)} bpm</div>`:''}
         ${a.avgCadenceSpm?`<div><b>${Math.round(a.avgCadenceSpm)}</b> spm</div>`:''}
-        ${a.elevGainM?`<div>+<b>${Math.round(a.elevGainM)}</b>m</div>`:''}
       </div>
-      ${renderGarminHrZones(a.hrZonesSec)}
-      ${renderGarminRoute(a.route)}
+      <div class="g-card-row">
+        ${renderGarminHrZones(a.hrZonesSec)}
+        ${renderGarminRoute(a.route)}
+      </div>
     </div>`;
 }
 

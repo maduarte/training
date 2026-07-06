@@ -114,35 +114,80 @@ def activity_summary(a):
     }
 
 
-def fetch_route(activity_id):
-    """Extrae [lat,lon] decimados desde activities get --details.
-    La respuesta completa puede pesar >2MB (streams segundo a segundo), así que
-    solo se llama para actividades nuevas/recientes con GPS (ver ROUTE_BACKFILL_DAYS)
-    y el resultado se cachea en el Gist para no repetir la llamada.
-    """
+def minetti_cost_ratio(gradient):
+    """Costo energético de correr en pendiente vs. plano (Minetti et al. 2002).
+    gradient: fracción subida/distancia (0.1 = 10% de pendiente). Devuelve el
+    multiplicador de costo respecto a correr en plano (1.0 = mismo costo)."""
+    i = max(-0.45, min(0.45, gradient))  # el polinomio no es fiable fuera de ~±45%
+    cost = 155.4*i**5 - 30.4*i**4 - 43.3*i**3 + 46.3*i**2 + 19.5*i + 3.6
+    return cost / 3.6  # 3.6 J/kg/m es el costo de correr en plano
+
+
+def estimate_gap_sec_per_km(samples, total_duration_sec, bucket_m=25):
+    """Ritmo equivalente en plano (GAP), aproximado con el modelo de Minetti.
+    samples: lista de (distancia_acumulada_m, elevación_m) en orden temporal.
+    Agrupa en tramos de ~bucket_m para suavizar el ruido del altímetro antes
+    de calcular la pendiente de cada tramo."""
+    if len(samples) < 5 or not total_duration_sec:
+        return None
+    samples = sorted(samples, key=lambda p: p[0])
+    buckets = [samples[0]]
+    next_target = samples[0][0] + bucket_m
+    for d, e in samples[1:]:
+        if d >= next_target:
+            buckets.append((d, e))
+            next_target = d + bucket_m
+    if buckets[-1][0] != samples[-1][0]:
+        buckets.append(samples[-1])
+
+    equiv_flat_m = 0.0
+    for (d0, e0), (d1, e1) in zip(buckets, buckets[1:]):
+        dd = d1 - d0
+        if dd <= 0:
+            continue
+        equiv_flat_m += dd * minetti_cost_ratio((e1 - e0) / dd)
+    if equiv_flat_m <= 0:
+        return None
+    return round(total_duration_sec / (equiv_flat_m / 1000))
+
+
+def fetch_route_and_gap(activity_id, total_duration_sec):
+    """Un solo fetch pesado (>2MB, streams segundo a segundo) para sacar dos cosas:
+    - ruta [lat,lon,elev] decimada a ROUTE_MAX_POINTS, para el mapa coloreado por desnivel.
+    - ritmo ajustado por desnivel (GAP), calculado sobre el stream completo (sin decimar).
+    Solo se llama para actividades nuevas/recientes con GPS (ver ROUTE_BACKFILL_DAYS) y
+    el resultado se cachea en el Gist para no repetir la llamada."""
     details = run_cli("activities", "get", str(activity_id), "--details")
     if not details:
-        return None
+        return None, None
     descriptors = details.get("metricDescriptors", [])
-    lat_idx = next((d["metricsIndex"] for d in descriptors if d["key"] == "directLatitude"), None)
-    lon_idx = next((d["metricsIndex"] for d in descriptors if d["key"] == "directLongitude"), None)
-    if lat_idx is None or lon_idx is None:
-        return None
+    idx = {d["key"]: d["metricsIndex"] for d in descriptors}
+    lat_i, lon_i = idx.get("directLatitude"), idx.get("directLongitude")
+    elev_i, dist_i = idx.get("directElevation"), idx.get("sumDistance")
+    if lat_i is None or lon_i is None:
+        return None, None
 
-    points = []
+    points = []    # [lat, lon, elev] para el mapa
+    samples = []   # (distancia_m, elev_m) para el cálculo de GAP
     for m in details.get("activityDetailMetrics", []):
         vals = m.get("metrics", [])
-        lat = vals[lat_idx] if lat_idx < len(vals) else None
-        lon = vals[lon_idx] if lon_idx < len(vals) else None
+        lat = vals[lat_i] if lat_i < len(vals) else None
+        lon = vals[lon_i] if lon_i < len(vals) else None
+        elev = vals[elev_i] if elev_i is not None and elev_i < len(vals) else None
+        dist = vals[dist_i] if dist_i is not None and dist_i < len(vals) else None
         if lat is not None and lon is not None:
-            points.append([round(lat, 5), round(lon, 5)])
+            points.append([round(lat, 5), round(lon, 5), round(elev, 1) if elev is not None else None])
+        if elev is not None and dist is not None:
+            samples.append((dist, elev))
 
     if not points:
-        return None
+        return None, None
     if len(points) > ROUTE_MAX_POINTS:
         step = len(points) / ROUTE_MAX_POINTS
         points = [points[int(i * step)] for i in range(ROUTE_MAX_POINTS)]
-    return points
+
+    gap = estimate_gap_sec_per_km(samples, total_duration_sec) if samples else None
+    return points, gap
 
 
 def main():
@@ -177,20 +222,25 @@ def main():
         prev = by_id.get(aid)
         if prev and prev.get("route"):
             summary["route"] = prev["route"]  # no repetir el fetch pesado
+            if "gapSecPerKm" in prev:
+                # ya se intentó calcular GAP antes (puede ser None si no se pudo, no se reintenta)
+                summary["gapSecPerKm"] = prev["gapSecPerKm"]
+            # si no, summary queda sin la key: dispara un refetch único abajo (caché de antes de GAP)
         by_id[aid] = summary
 
     route_cutoff = (datetime.now(timezone.utc) - timedelta(days=ROUTE_BACKFILL_DAYS)).date().isoformat()
     fetched_routes = 0
     for summary in by_id.values():
-        if summary.get("route") or not summary.get("hasPolyline"):
+        if summary.get("route") and "gapSecPerKm" in summary:
             continue
-        if summary.get("type") not in ROUTE_TYPES:
+        if not summary.get("hasPolyline") or summary.get("type") not in ROUTE_TYPES:
             continue
         if (summary.get("date") or "") < route_cutoff:
             continue
-        route = fetch_route(summary["garminActivityId"])
+        route, gap = fetch_route_and_gap(summary["garminActivityId"], summary.get("durationSec"))
         if route:
             summary["route"] = route
+            summary["gapSecPerKm"] = gap
             fetched_routes += 1
 
     payload = {

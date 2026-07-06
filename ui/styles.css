@@ -129,11 +129,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 /* Garmin activity card (ver core/app.js renderGarminSection) */
 .g-card{background:#0c1310;border:1px solid #1c2a22;border-radius:12px;padding:12px 14px;margin-bottom:14px}
 .g-card-hdr{font-size:11px;font-weight:700;color:#52c9a0;letter-spacing:.5px;margin-bottom:9px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.g-stats{display:flex;flex-wrap:wrap;gap:8px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#9db3a6;margin-bottom:10px}
+.g-stats{display:flex;flex-wrap:wrap;gap:8px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#9db3a6;margin-bottom:6px}
+.g-stats:last-of-type{margin-bottom:10px}
 .g-stats b{color:#e0e0f0;font-weight:700}
-.g-hrzones{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:10px;background:#1a1a22}
-.g-hrzones span{display:block;height:100%}
-.g-route{width:100%;height:auto;max-height:150px;display:block;background:#081008;border-radius:8px}
+.g-card-row{display:flex;gap:10px;align-items:center}
+.g-hrzones-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
+.g-hrzones-donut{width:60px;height:60px}
+.g-hrzones-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px;font-size:8px;color:#8a8aa0;letter-spacing:.3px;max-width:70px}
+.g-hrzone-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:2px;vertical-align:middle}
+.g-route{flex:1;min-width:0;width:100%;height:auto;max-height:150px;display:block;background:#081008;border-radius:8px}
 
 /* Run log fields */
 .m-time-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
