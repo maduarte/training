@@ -311,6 +311,158 @@ function buildTrail10kWeeks(){return [
       {name:"Activación de glúteo",reps:"15 c/lado"}]),
   ]},
 ];}
+
+// ══════════════════════════════════════════════════
+// BASAL DE TRAIL — 12 semanas (22 ago – 8 nov 2026)
+// Sin carrera objetivo. Consistencia, salud y fuerza en subida.
+// Debilidad a corregir: sostener el esfuerzo corriendo las subidas
+// (lo que faltó en Valdivia jun-2026 y Putaendo ago-2026).
+// La lesión de banda iliotibial vino de saltarse fuerza y movilidad:
+// aquí son sesiones del plan, no un extra opcional.
+// Fines de semana bloqueados cada 2 semanas → el largo se adelanta al viernes.
+// ══════════════════════════════════════════════════
+
+// Bloques de fuerza reutilizables
+const FA_BASE=[
+  {name:"Clamshell con banda",reps:"20 c/lado"},{name:"Elevación de cadera lateral",reps:"15 c/lado"},
+  {name:"Monster walk",reps:"15 pasos c/dir."},{name:"Puente de glúteo a una pierna",reps:"12 c/lado"},
+  {name:"Plancha lateral",reps:"30 seg c/lado"},{name:"Movilidad de cadera",reps:"10 c/dir."},
+  {name:"Foam roller",reps:"60 seg/zona"}];
+const FA_PLUS=[
+  {name:"Clamshell con banda",reps:"25 c/lado"},{name:"Elevación de cadera lateral",reps:"20 c/lado"},
+  {name:"Monster walk",reps:"20 pasos c/dir."},{name:"Paso de valla lateral",reps:"12 c/lado"},
+  {name:"Step-down",reps:"10 c/lado"},{name:"Plancha lateral",reps:"45 seg c/lado"},
+  {name:"Rotación de cadera 90/90",reps:"10 c/lado"},{name:"Foam roller",reps:"60 seg/zona"}];
+const FB_BASE=[
+  {name:"Sentadilla",reps:"12"},{name:"Box step-up",reps:"10 c/lado"},
+  {name:"Peso muerto rumano",reps:"12"},{name:"Elevación de talón",reps:"20"},
+  {name:"Sentadilla isométrica",reps:"45 seg"},{name:"Movilidad de tobillos",reps:"10 c/dir."}];
+const FB_PLUS=[
+  {name:"Sentadilla búlgara",reps:"10 c/lado"},{name:"Box step-up",reps:"12 c/lado con carga"},
+  {name:"Hip thrust",reps:"12"},{name:"Elevación de talón a una pierna",reps:"15 c/lado"},
+  {name:"Zancada caminando",reps:"12 c/lado"},{name:"Sentadilla isométrica",reps:"60 seg"},
+  {name:"Estiramiento de psoas",reps:"40 seg c/lado"}];
+const FB_POT=[
+  {name:"Salto cajón 1 pierna",reps:"6 c/lado"},{name:"Sentadilla búlgara",reps:"10 c/lado"},
+  {name:"Hip thrust",reps:"10"},{name:"Zancada caminando",reps:"12 c/lado"},
+  {name:"Elevación de talón a una pierna",reps:"15 c/lado"},{name:"Sentadilla isométrica",reps:"60 seg"},
+  {name:"Estiramiento de psoas",reps:"40 seg c/lado"}];
+const F_MOV=[
+  {name:"Movilidad de cadera",reps:"10 c/dir."},{name:"Rotación de cadera 90/90",reps:"10 c/lado"},
+  {name:"Movilidad de tobillos",reps:"10 c/dir."},{name:"Estiramiento de psoas",reps:"45 seg c/lado"},
+  {name:"Balance a un pie (triángulo)",reps:"40 seg c/pie"},{name:"Foam roller",reps:"60 seg/zona"},
+  {name:"Estiramientos",reps:"40 seg c/u"}];
+const F_MANT=[
+  {name:"Clamshell con banda",reps:"20 c/lado"},{name:"Sentadilla búlgara",reps:"10 c/lado"},
+  {name:"Hip thrust",reps:"12"},{name:"Elevación de talón a una pierna",reps:"15 c/lado"},
+  {name:"Plancha lateral",reps:"45 seg c/lado"}];
+
+function buildBasalTrailWeeks(){return [
+  {num:1,dates:"22–23 Ago",phase:"REACTIVACIÓN",totalKm:5,days:[
+    W("b1d0","2026-08-22","Sáb 22 Ago","Vuelta a correr","SUAVE",5,"Primera corrida desde el 6 de agosto. 5km planos, muy suave, conversando sin esfuerzo. No mires el ritmo.\n\n⚠️ Vienes saliendo de influenza: si aparece fatiga desproporcionada, pulso alto en esfuerzo fácil o falta de aire, corta la sesión. Esta semana el objetivo es reactivar, no entrenar."),
+    F("b1d1","2026-08-23","Dom 23 Ago","Fuerza A – Cadera y movilidad",3,"La sesión que te saltaste en el plan de Torrencial y que terminó en la lesión. Aquí es innegociable: sin glúteo medio fuerte, la banda iliotibial paga la cuenta cuando suba el volumen.\n\nSin carga externa. Aprende el patrón: la pelvis no rota, la cadera no cae.",FA_BASE),
+  ]},
+  {num:2,dates:"24–30 Ago",phase:"REACTIVACIÓN",totalKm:16,days:[
+    F("b2d0","2026-08-24","Lun 24 Ago","Fuerza A – Cadera y glúteo medio",3,"Repite el patrón del domingo. Si algún ejercicio te sale torcido, baja las repeticiones antes que la calidad.",FA_BASE),
+    W("b2d1","2026-08-25","Mar 25 Ago","Rodaje suave plano","SUAVE",5,"5km planos, ritmo conversable. Sigues en ventana post-influenza: fácil de verdad."),
+    W("b2d2","2026-08-26","Mié 26 Ago","Rodaje ondulado suave","SUAVE",5,"5km con ~80m D+. Primera ondulación. Sube trotando corto, sin forzar."),
+    F("b2d3","2026-08-27","Jue 27 Ago","Fuerza B – Base de subida",3,"Empieza la fuerza específica de subida. Sin carga o muy liviana: esta semana es técnica.\n\nLa sentadilla isométrica es la más importante del bloque: entrena el cuádriceps a sostener tensión, que es exactamente lo que se te agotó en Putaendo.",FB_BASE),
+    W("b2d4","2026-08-28","Vie 28 Ago","Rodaje ondulado","SUAVE",6,"6km con ~130m D+. Cierra la semana con algo de cerro suave."),
+    W("b2d5","2026-08-29","Sáb 29 Ago","Descanso (fin de semana bloqueado)","DESCANSO",0,"Fin de semana bloqueado. Descanso completo."),
+    W("b2d6","2026-08-30","Dom 30 Ago","Descanso","DESCANSO",0,"Descanso. Si quieres moverte: caminata o movilidad 20min."),
+  ]},
+  {num:3,dates:"31 Ago – 6 Sep",phase:"REACTIVACIÓN",totalKm:20,days:[
+    F("b3d0","2026-08-31","Lun 31 Ago","Fuerza A – Cadera y glúteo medio",3,"Tercera sesión del patrón. Ya debería salirte sin pensarlo. Si el clamshell con banda te resulta fácil, sube la banda.",FA_BASE),
+    W("b3d1","2026-09-01","Mar 1 Sep","Cuestas cortas","SUAVE",6,"Primera sesión de cuestas del plan. Calienta 15min → 6×(45 seg subiendo firme / bajada trotando suave) → 10min suave. ~160m D+.\n\nSube con zancada corta y cadencia alta, mirando 5 metros adelante. No es sprint: es fuerza. Debes terminar cada repetición pudiendo hacer una más."),
+    W("b3d2","2026-09-02","Mié 2 Sep","Descanso o bici","DESCANSO",0,"🚲 Descanso, o 30min de bici suave si quieres mover piernas. Si pedaleas, regístralo — así el volumen aeróbico real queda visible."),
+    F("b3d3","2026-09-03","Jue 3 Sep","Fuerza B – Base de subida",3,"Segunda de fuerza de subida. Si la sentadilla y el step-up van cómodos, agrega peso (mochila o mancuerna).",FB_BASE),
+    W("b3d4","2026-09-04","Vie 4 Sep","Rodaje regenerativo","SUAVE",5,"5km planos muy suaves. Piernas frescas para el sábado."),
+    W("b3d5","2026-09-05","Sáb 5 Sep","Largo trail – primera salida a cerro","MEDIO",9,"Fin de semana libre. 9km con ~350m D+. Primera salida a cerro del bloque.\n\nRegla del día: sube corriendo solo lo que puedas sostener conversando. Cuando se corte la conversación, camina — sin culpa. Aprender dónde está ese límite es el objetivo del bloque completo."),
+    W("b3d6","2026-09-06","Dom 6 Sep","Descanso","DESCANSO",0,"Descanso completo. Revisa cómo respondió la rodilla a las 24h."),
+  ]},
+  {num:4,dates:"7–13 Sep",phase:"REACTIVACIÓN",totalKm:23,days:[
+    F("b4d0","2026-09-07","Lun 7 Sep","Fuerza A – Cadera y glúteo medio",3,"Última semana de la fase de reactivación. Mantén el trabajo de cadera al día.",FA_BASE),
+    W("b4d1","2026-09-08","Mar 8 Sep","Cuestas cortas","MEDIO",7,"Calienta 15min → 8×(45 seg subiendo firme / bajada trotando) → 10min suave. ~190m D+. Dos repeticiones más que la semana pasada, misma calidad."),
+    W("b4d2","2026-09-09","Mié 9 Sep","Rodaje suave plano","SUAVE",5,"5km planos. Recuperación entre las dos sesiones duras."),
+    F("b4d3","2026-09-10","Jue 10 Sep","Fuerza B – Progresión de carga",4,"Sube a 4 series y agrega carga. Entras a fuerza de verdad: la sentadilla búlgara y el step-up cargado son los que construyen la subida.",FB_PLUS),
+    W("b4d4","2026-09-11","Vie 11 Sep","Largo ondulado (adelantado)","MEDIO",11,"Fin de semana bloqueado: el largo se adelanta a hoy. 11km con ~400m D+ en terreno rodante.\n\nBusca subidas de 3–5min y córrelas completas a ritmo cómodo. Es el primer ensayo de subida continua."),
+    W("b4d5","2026-09-12","Sáb 12 Sep","Descanso (fin de semana bloqueado)","DESCANSO",0,"Fin de semana bloqueado. Descanso."),
+    W("b4d6","2026-09-13","Dom 13 Sep","Descanso","DESCANSO",0,"Descanso completo."),
+  ]},
+  {num:5,dates:"14–20 Sep",phase:"FUERZA EN CUESTA",totalKm:26,days:[
+    F("b5d0","2026-09-14","Lun 14 Sep","Fuerza B – Progresión de carga",4,"Arranca la fase de fuerza en cuesta. La fuerza pasa a ser el motor del bloque: no la saltes por semana de Fiestas Patrias.",FB_PLUS),
+    W("b5d1","2026-09-15","Mar 15 Sep","Cuestas medias","MEDIO",8,"Calienta 15min → 6×(2 min subiendo a esfuerzo controlado / bajada trotando) → 10min suave. ~250m D+.\n\nCambio importante: de 45 segundos a 2 minutos. Ya no es fuerza pura, es sostener. Busca un esfuerzo que puedas repetir seis veces igual — si la última cae mucho, partiste muy fuerte."),
+    W("b5d2","2026-09-16","Mié 16 Sep","Rodaje suave plano","SUAVE",5,"5km planos suaves."),
+    F("b5d3","2026-09-17","Jue 17 Sep","Fuerza A – Cadera avanzada",4,"Sube a 4 series y entra el step-down: control excéntrico para las bajadas, que es donde la banda iliotibial más sufre.",FA_PLUS),
+    W("b5d4","2026-09-18","Vie 18 Sep","Descanso","DESCANSO",0,"🇨🇱 Descanso. Come tranquilo, mañana hay cerro."),
+    W("b5d5","2026-09-19","Sáb 19 Sep","Largo trail – primera subida sostenida","MEDIO",13,"Fin de semana libre. 13km con ~550m D+.\n\nLa sesión clave: elige UNA subida de 10–15min y córrela completa sin caminar, a ritmo conversable-justo. Si tienes que caminar, la elegiste muy empinada — anótalo y busca una más suave la próxima. El resto del recorrido, suave."),
+    W("b5d6","2026-09-20","Dom 20 Sep","Descanso","DESCANSO",0,"Descanso completo."),
+  ]},
+  {num:6,dates:"21–27 Sep",phase:"DESCARGA",totalKm:22,days:[
+    F("b6d0","2026-09-21","Lun 21 Sep","Fuerza – Movilidad y activación",2,"Semana de descarga: bajas carga, no frecuencia. Sesión de movilidad pura.\n\nEsta es la sesión que más se salta la gente y la que más te habría servido en mayo. Hazla completa.",F_MOV),
+    W("b6d1","2026-09-22","Mar 22 Sep","Rodaje ondulado suave","SUAVE",6,"6km con ~120m D+. Suave de verdad, es semana de asimilar."),
+    W("b6d2","2026-09-23","Mié 23 Sep","Rodaje suave plano","SUAVE",5,"5km planos."),
+    F("b6d3","2026-09-24","Jue 24 Sep","Fuerza A – Carga reducida",3,"Mismo patrón, 3 series, sin banda dura. Mantiene el estímulo sin sumar fatiga.",FA_BASE),
+    W("b6d4","2026-09-25","Vie 25 Sep","Rodaje con cuestas suaves (adelantado)","MEDIO",11,"Fin de semana bloqueado: sesión adelantada. 11km con ~400m D+, cuestas suaves y continuas. Ritmo cómodo todo el rato, sin bloques duros."),
+    W("b6d5","2026-09-26","Sáb 26 Sep","Descanso (fin de semana bloqueado)","DESCANSO",0,"Fin de semana bloqueado. Descanso."),
+    W("b6d6","2026-09-27","Dom 27 Sep","Descanso","DESCANSO",0,"Descanso completo. Cierre de la primera mitad del bloque: si no hay molestias, vas bien encaminado."),
+  ]},
+  {num:7,dates:"28 Sep – 4 Oct",phase:"FUERZA EN CUESTA",totalKm:30,days:[
+    F("b7d0","2026-09-28","Lun 28 Sep","Fuerza B – Progresión de carga",4,"Vuelve la carga tras la descarga. Sube peso donde puedas mantener la técnica.",FB_PLUS),
+    W("b7d1","2026-09-29","Mar 29 Sep","Cuestas medias",  "MEDIO",9,"Calienta 15min → 8×(2 min subiendo a esfuerzo controlado / bajada trotando) → 10min suave. ~300m D+. Dos repeticiones más que en la semana 5."),
+    W("b7d2","2026-09-30","Mié 30 Sep","Rodaje suave plano","SUAVE",5,"5km planos."),
+    F("b7d3","2026-10-01","Jue 1 Oct","Fuerza A – Cadera avanzada",4,"Cadera y control excéntrico. Cuatro series completas.",FA_PLUS),
+    W("b7d4","2026-10-02","Vie 2 Oct","Descanso","DESCANSO",0,"Descanso. Mañana es la sesión larga más exigente hasta ahora."),
+    W("b7d5","2026-10-03","Sáb 3 Oct","Largo trail – dos subidas sostenidas","MEDIO",16,"Fin de semana libre. 16km con ~700m D+.\n\nDos bloques de subida continua de 12min cada uno, separados por al menos 15min de rodaje suave. Mismo esfuerzo en ambos: si el segundo se cae mucho, el primero fue muy fuerte. Registra la FC media de cada bloque."),
+    W("b7d6","2026-10-04","Dom 4 Oct","Descanso","DESCANSO",0,"Descanso completo."),
+  ]},
+  {num:8,dates:"5–11 Oct",phase:"FUERZA EN CUESTA",totalKm:32,days:[
+    F("b8d0","2026-10-05","Lun 5 Oct","Fuerza B – Progresión de carga",4,"Cuarta semana con carga alta. Si algo molesta, baja peso antes que saltarte la sesión.",FB_PLUS),
+    W("b8d1","2026-10-06","Mar 6 Oct","Subida sostenida","INTENSO",10,"Calienta 15min → 3×(8 min de subida continua a esfuerzo firme pero sostenible / baja trotando) → 10min suave. ~350m D+.\n\nPrimera sesión de subida larga. El esfuerzo debe ser el que aguantarías 30 minutos: respiración fuerte pero controlada. Esto es exactamente lo que te faltó en Putaendo."),
+    W("b8d2","2026-10-07","Mié 7 Oct","Rodaje suave plano","SUAVE",6,"6km planos, recuperación."),
+    F("b8d3","2026-10-08","Jue 8 Oct","Fuerza A – Cadera avanzada",4,"Cadera y excéntrico. Mantén la calidad con las piernas cansadas.",FA_PLUS),
+    W("b8d4","2026-10-09","Vie 9 Oct","Largo ondulado (adelantado)","MEDIO",16,"Fin de semana bloqueado: largo adelantado. 16km con ~700m D+ rodante.\n\nSin bloques cronometrados: corre todas las subidas que puedas sostener y camina las que no. Es un test honesto de dónde estás."),
+    W("b8d5","2026-10-10","Sáb 10 Oct","Descanso (fin de semana bloqueado)","DESCANSO",0,"Fin de semana bloqueado. Descanso."),
+    W("b8d6","2026-10-11","Dom 11 Oct","Descanso","DESCANSO",0,"Descanso completo."),
+  ]},
+  {num:9,dates:"12–18 Oct",phase:"SUBIDA SOSTENIDA",totalKm:36,days:[
+    F("b9d0","2026-10-12","Lun 12 Oct","Fuerza B – Potencia",4,"Entra la pliometría: salto a cajón a una pierna, bajo volumen y aterrizaje suave. Si la rodilla dice algo, sáltate el salto y haz el resto.",FB_POT),
+    W("b9d1","2026-10-13","Mar 13 Oct","Subida sostenida","INTENSO",10,"Calienta 15min → 2×(12 min de subida continua / baja trotando) → 10min suave. ~400m D+. Bloques más largos, mismo esfuerzo controlado."),
+    W("b9d2","2026-10-14","Mié 14 Oct","Rodaje suave plano","SUAVE",6,"6km planos."),
+    F("b9d3","2026-10-15","Jue 15 Oct","Fuerza A – Cadera avanzada",4,"Cadera al día antes del largo más exigente del bloque.",FA_PLUS),
+    W("b9d4","2026-10-16","Vie 16 Oct","Descanso","DESCANSO",0,"Descanso completo. Prepara mochila, agua y comida para mañana."),
+    W("b9d5","2026-10-17","Sáb 17 Oct","Largo trail 20km","MEDIO",20,"Fin de semana libre. 20km con ~900m D+. La sesión más larga desde la carrera de Valdivia.\n\nSube corriendo todo lo que puedas sostener. Come y bebe desde el kilómetro 5, no esperes a tener hambre. Al terminar, anota cuántas subidas corriste completas — ese es el número que queremos ver crecer."),
+    W("b9d6","2026-10-18","Dom 18 Oct","Descanso","DESCANSO",0,"Descanso completo. Piernas en alto."),
+  ]},
+  {num:10,dates:"19–25 Oct",phase:"DESCARGA",totalKm:28,days:[
+    F("b10d0","2026-10-19","Lun 19 Oct","Fuerza – Movilidad y activación",2,"Segunda descarga del bloque. Movilidad completa, sin carga.",F_MOV),
+    W("b10d1","2026-10-20","Mar 20 Oct","Rodaje ondulado","SUAVE",7,"7km con ~200m D+. Suave, sin bloques."),
+    W("b10d2","2026-10-21","Mié 21 Oct","Rodaje suave plano","SUAVE",6,"6km planos."),
+    F("b10d3","2026-10-22","Jue 22 Oct","Fuerza A – Carga reducida",3,"Tres series, banda suave. Mantener, no construir.",FA_BASE),
+    W("b10d4","2026-10-23","Vie 23 Oct","Rodaje ondulado largo (adelantado)","MEDIO",15,"Fin de semana bloqueado: sesión adelantada. 15km con ~600m D+ a ritmo cómodo de principio a fin."),
+    W("b10d5","2026-10-24","Sáb 24 Oct","Descanso (fin de semana bloqueado)","DESCANSO",0,"Fin de semana bloqueado. Descanso."),
+    W("b10d6","2026-10-25","Dom 25 Oct","Descanso","DESCANSO",0,"Descanso completo. Viene la semana pico."),
+  ]},
+  {num:11,dates:"26 Oct – 1 Nov",phase:"SUBIDA SOSTENIDA",totalKm:40,days:[
+    F("b11d0","2026-10-26","Lun 26 Oct","Fuerza B – Potencia",4,"Semana pico. Última sesión de potencia con carga alta.",FB_POT),
+    W("b11d1","2026-10-27","Mar 27 Oct","Subida sostenida","INTENSO",11,"Calienta 15min → 3×(10 min de subida continua / baja trotando) → 10min suave. ~450m D+. Treinta minutos de subida firme repartidos en tres bloques: el mayor estímulo del plan."),
+    W("b11d2","2026-10-28","Mié 28 Oct","Rodaje suave plano","SUAVE",7,"7km planos, muy suaves."),
+    F("b11d3","2026-10-29","Jue 29 Oct","Fuerza A – Cadera avanzada",4,"Cadera completa. Mañana descansas.",FA_PLUS),
+    W("b11d4","2026-10-30","Vie 30 Oct","Descanso","DESCANSO",0,"Descanso completo. Duerme bien: mañana es el pico del bloque."),
+    W("b11d5","2026-10-31","Sáb 31 Oct","Largo trail 22km – pico del bloque","MEDIO",22,"Fin de semana libre. 22km con ~1000m D+. La sesión más grande de las 12 semanas.\n\nMismo perfil que Valdivia en junio (19km / 1300m), pero llegando entrenado en subida en vez de improvisando. Sube corriendo, come temprano, y guarda algo para los últimos 5km."),
+    W("b11d6","2026-11-01","Dom 1 Nov","Descanso","DESCANSO",0,"Descanso completo. Lo hiciste."),
+  ]},
+  {num:12,dates:"2–8 Nov",phase:"CIERRE Y TEST",totalKm:24,days:[
+    F("b12d0","2026-11-02","Lun 2 Nov","Fuerza – Mantenimiento",3,"Última semana. Baja el volumen de fuerza pero no la sacas: el objetivo es llegar fresco al test del viernes.",F_MANT),
+    W("b12d1","2026-11-03","Mar 3 Nov","Rodaje suave plano","SUAVE",6,"6km planos, muy suaves."),
+    W("b12d2","2026-11-04","Mié 4 Nov","Rodaje ondulado suave","SUAVE",6,"6km con ~150m D+. Activación, nada más."),
+    F("b12d3","2026-11-05","Jue 5 Nov","Fuerza – Mantenimiento",3,"Sesión corta. Sin carga nueva.",F_MANT),
+    W("b12d4","2026-11-06","Vie 6 Nov","🎯 Test de cerro","INTENSO",12,"Fin de semana bloqueado: el test se hace hoy. 12km con ~500m D+.\n\nCalienta 20min → UNA subida sostenida de 15–20min a esfuerzo firme → baja controlado → 10min suave.\n\n**Registra la FC media de la subida.** Compárala con Putaendo (1 ago: 162 bpm de media, 187 máx en 10.6km). Si sostienes 15–20min de subida a una FC parecida o menor, el bloque funcionó."),
+    W("b12d5","2026-11-07","Sáb 7 Nov","Descanso (fin de semana bloqueado)","DESCANSO",0,"Fin de semana bloqueado. Descanso."),
+    W("b12d6","2026-11-08","Dom 8 Nov","Cierre del bloque","DESCANSO",0,"Fin de las 12 semanas. Revisa los números con Claude: volumen acumulado, D+ total, RHR y la FC del test versus Putaendo. Con eso armamos el bloque siguiente."),
+  ]},
+];}
+
 // ══════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════

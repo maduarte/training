@@ -35,6 +35,32 @@ const EX={
   'Movilidad de espalda':'Rotaciones torácicas, apertura de pecho, cat-cow. Libera la espalda para mantener postura en carreras largas.',
   'Yoga/movilidad':'Postura del guerrero, perro boca abajo, paloma, torsiones. 30–45 minutos. Recuperación activa con rango de movimiento completo.',
   'Estiramientos':'Estáticos post-entrenamiento: cuádriceps, isquios, gemelos, cadera. Mantén 30–45 segundos. No rebotes.',
+
+  // ── Cadera y glúteo medio (prevención banda iliotibial) ──
+  'Clamshell':'De lado, rodillas dobladas a 90°, pies juntos. Abre la rodilla de arriba sin rotar la pelvis. El tronco no se mueve. Activa glúteo medio, el músculo clave para que la banda iliotibial no se sobrecargue.',
+  'Clamshell con banda':'Igual que el clamshell pero con banda elástica sobre las rodillas. Sube la resistencia manteniendo el control: si la pelvis rota, la banda es muy dura.',
+  'Elevación de cadera lateral':'De lado, cuerpo alineado, pierna estirada. Eleva la pierna de arriba unos 30cm sin llevarla adelante ni rotar el pie. Baja lento. Glúteo medio en su versión más pura.',
+  'Monster walk':'Banda elástica sobre los tobillos o rodillas, semi-sentadilla. Camina de lado dando pasos amplios sin juntar los pies. Mantén la tensión de la banda todo el recorrido.',
+  'Puente de glúteo a una pierna':'Boca arriba, un pie apoyado y la otra pierna extendida. Sube la cadera empujando con el talón apoyado. La pelvis no se inclina hacia el lado libre.',
+
+  // ── Control excéntrico y equilibrio ──
+  'Step-down':'De pie sobre un cajón, baja lento (3 segundos) tocando el suelo con el talón de la otra pierna, sin apoyar peso. La rodilla de apoyo no se va hacia dentro. Control excéntrico: lo que te falta en las bajadas.',
+  'Step-down asistido':'Igual que el step-down pero apoyando una mano en la pared o baranda. Úsalo mientras aprendes el patrón o si la rodilla protesta.',
+  'Balance a un pie':'De pie sobre una pierna, rodilla levemente flexionada. Mantén la cadera nivelada, sin que caiga el lado libre. Mirada al frente.',
+  'Balance a un pie (triángulo)':'Sobre una pierna, toca con el pie libre tres puntos en el suelo formando un triángulo: adelante, al lado y atrás. Sin apoyar peso. Trabaja control de cadera en todos los planos.',
+  'Balance a un pie con perturbación':'Equilibrio a un pie mientras alguien te empuja suave o lanzas y recibes una pelota. Entrena la respuesta refleja que necesitas en terreno irregular.',
+  'Estocada asistida':'Estocada apoyando una mano en pared o baranda. Reduce la demanda de equilibrio para concentrarte en el recorrido y la alineación de la rodilla.',
+  'Zancada caminando':'Estocadas avanzando, alternando piernas. Torso erguido, rodilla trasera cerca del suelo. Simula el patrón de subida con zancada larga.',
+  'Salto cajón 1 pierna':'Salta a un cajón bajo con una sola pierna y aterriza suave, absorbiendo con la rodilla y la cadera. Bajo volumen, calidad sobre cantidad. Baja caminando, nunca saltando.',
+
+  // ── Fuerza específica de subida ──
+  'Sentadilla isométrica':'Espalda contra la pared, rodillas a 90°, muslos paralelos al suelo. Mantén la posición. Entrena la resistencia del cuádriceps al esfuerzo sostenido: exactamente lo que se agota en una subida larga.',
+  'Elevación de talón a una pierna':'De pie sobre una pierna, elévate en punta lento (2s arriba, 2s abajo). Apoya una mano para equilibrio. El sóleo es el motor de la subida y trabaja mejor a una pierna.',
+  'Activación tibial':'De pie con talones en el suelo, levanta las puntas de los pies contra resistencia o apoyado en la pared. Fortalece el tibial anterior, que sufre en las bajadas largas.',
+
+  // ── Movilidad ──
+  'Rotación de cadera 90/90':'Sentado en el suelo, una pierna adelante a 90° y la otra al lado a 90°. Rota de un lado al otro sin usar las manos. Libera la rotación de cadera que necesitas para zancada amplia en cerro.',
+  'Estiramiento de psoas':'Rodilla en el suelo en posición de caballero, empuja la cadera hacia adelante manteniendo el glúteo apretado. El psoas acortado inclina la pelvis y sobrecarga la cadena lateral.',
 };
 
 // ══════════════════════════════════════════════════

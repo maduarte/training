@@ -1692,6 +1692,28 @@ function migrateStorage(){
     S.set('tw_patched_torrencial_mondayweeks',true);
     console.log('[Migration] Torrencial 44k: cierre convertido a semanas lunes-domingo');
   }
+
+  // Step 7: Seed "Basal de Trail" — bloque de 12 semanas (22 ago – 8 nov 2026).
+  // Sin carrera objetivo: consistencia, salud y fuerza en subida tras el alta de la
+  // banda iliotibial (18 ago 2026). Se deja como plan activo.
+  const basalId='basal_trail_2026';
+  const racesB=S.get('tw_races')||[];
+  if(!racesB.find(r=>r.id===basalId)){
+    const weeks=S.get(`tw_weeks_${basalId}`)||buildBasalTrailWeeks();
+    racesB.push({
+      id:basalId,
+      name:'Basal de Trail',
+      date:'2026-11-08',
+      distance:302,
+      elevation:8900,
+      defaultTitle:'🏔 Basal de Trail',
+      weeks
+    });
+    S.set('tw_races',racesB);
+    S.set(`tw_weeks_${basalId}`,weeks);
+    S.set('tw_last_rid', basalId);
+    console.log('[Migration] Basal de Trail sembrada en tw_races');
+  }
 }
 migrateStorage();
 
