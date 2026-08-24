@@ -30,7 +30,7 @@ function openSettings(){
     return `<div class="settings-race-row${isActive?' settings-race-active':''}" onclick="closeSettings();launchApp('mauricio','${r.id}')">
       <div>
         <div class="settings-row-label">${r.name}${isActive?'<span style="color:#52c9a0;font-size:10px;font-weight:600;margin-left:6px">● ACTIVA</span>':''}</div>
-        <div class="settings-row-sub">${r.date} · ${r.distance}km · ${r.elevation}m D+</div>
+        <div class="settings-row-sub">${r.date} · ${fmtNum(r.distance)}km · ${r.elevation}m D+</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:12px;font-weight:700;color:#f5b731">${badge}</span>
@@ -117,7 +117,7 @@ function launchApp(aid,rid){
   // Setup header
   const savedTitle=S.get(`tw_title_${rid}`);
   document.getElementById('app-title').textContent=savedTitle||race.defaultTitle||`⛰ ${race.name}`;
-  document.getElementById('race-sub').textContent=`${race.distance}km · ${race.elevation}m D+`;
+  document.getElementById('race-sub').textContent=`${fmtNum(race.distance)}km · ${race.elevation}m D+`;
   // Hide selector, show app
   document.getElementById('app').classList.remove('hidden');
   st.tab='cal';
@@ -188,10 +188,10 @@ function renderCal(){
     } else if(day.km>0){
       const estSec=estSeconds(day);
       const durStr=st.pacesSet?fmtDur(estSec):'';
-      rightContent=`<div class="card-km">${day.km}<span>km</span></div>`+
+      rightContent=`<div class="card-km">${fmtNum(day.km)}<span>km</span></div>`+
         (durStr?`<div class="card-dur has-dur"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${durStr}</div>`:'');
     }
-    const logLine=log?.distance?`<div class="card-logged">✓ ${log.distance}km${log.time?' · '+log.time:''}</div>`:'';
+    const logLine=log?.distance?`<div class="card-logged">✓ ${fmtNum(log.distance)}km${log.time?' · '+log.time:''}</div>`:'';
 
     card.innerHTML=`
       <div class="swap-badge">MOVER</div>
@@ -382,7 +382,7 @@ function calcPace(){
   const h=parseInt(document.getElementById('m-th')?.value)||0;
   const m=parseInt(document.getElementById('m-tm')?.value)||0;
   const s=parseInt(document.getElementById('m-ts')?.value)||0;
-  const dist=parseFloat(document.getElementById('m-dist')?.value)||0;
+  const dist=numIn(document.getElementById('m-dist')?.value)||0;
   const el=document.getElementById('m-pace');
   if(!el)return;
   if(dist>0&&(h||m||s)){
@@ -547,7 +547,7 @@ function renderGarminSection(day){
     <div class="g-card">
       <div class="g-card-hdr">⌚ ${escHtml(a.name||'Actividad Garmin')}${a.locationName?` · ${escHtml(a.locationName)}`:''}</div>
       <div class="g-stats">
-        <div><b>${a.distanceKm}</b> km</div>
+        <div><b>${fmtNum(a.distanceKm,2)}</b> km</div>
         ${a.elevGainM?`<div>+<b>${Math.round(a.elevGainM)}</b>m</div>`:''}
         <div><b>${fmtHMS(a.durationSec)}</b></div>
       </div>
@@ -587,7 +587,7 @@ function openModal(i){
   document.getElementById('m-chips').innerHTML=
     `<span class="m-chip" style="background:${ts.ch};color:${ts.tx}">${day.type}</span>`+
     (day.type==='FUERZA'?`<span class="m-km" style="color:${ts.tx}">${day.sets||3} series</span>`:
-      day.km>0?`<span class="m-km" style="color:${ts.tx}">${day.km} km</span>`+
+      day.km>0?`<span class="m-km" style="color:${ts.tx}">${fmtNum(day.km)} km</span>`+
         (st.pacesSet&&day.type!=='DESCANSO'?`<span class="m-km" style="color:#7070a0;font-size:12px">· ${fmtDur(estSeconds(day))}</span>`:''):'');
   document.getElementById('m-desc').textContent=day.desc;
   document.getElementById('m-garmin').innerHTML='';
@@ -630,7 +630,7 @@ function openModal(i){
       </div>
       <div class="m-dist-row">
         <div class="m-lbl">DISTANCIA (km)</div>
-        <input class="m-input-dist" id="m-dist" type="number" min="0" step="0.1" value="${dist}" inputmode="decimal" oninput="calcPace()">
+        <input class="m-input-dist" id="m-dist" type="text" value="${fmtNum(dist)}" inputmode="decimal" autocomplete="off" oninput="decInput(this);calcPace()">
       </div>
       <div class="m-pace" id="m-pace"></div>
       <div class="m-rxn-row">
@@ -711,7 +711,7 @@ function _renderEditFields(type,day){
       <div class="edit-lbl" style="margin-bottom:4px">SESIÓN</div>
       <input class="edit-input edit-field-mb" id="edit-session" value="${escHtml(day.session||'')}" placeholder="Nombre de la sesión">
       ${showKm?`<div class="edit-lbl" style="margin-bottom:4px">DISTANCIA (km)</div>
-      <input class="edit-input-sm edit-field-mb" id="edit-km" type="number" min="0" step="0.5" value="${day.km||''}" placeholder="0" inputmode="decimal">`:''}
+      <input class="edit-input-sm edit-field-mb" id="edit-km" type="text" value="${fmtNum(day.km||'')}" placeholder="0" inputmode="decimal" autocomplete="off" oninput="decInput(this)">`:''}
       <div class="edit-lbl" style="margin-top:${showKm?10:0}px;margin-bottom:4px">DESCRIPCIÓN</div>
       <textarea class="edit-textarea edit-field-mb" id="edit-desc" rows="4" placeholder="Descripción del entrenamiento...">${escHtml(day.desc||'')}</textarea>`;
   }
@@ -735,7 +735,7 @@ function editSelectType(t){
   // Update the modalDay type for rendering (doesn't persist yet)
   const daySnap={...st.modalDay,
     session:document.getElementById('edit-session')?.value??st.modalDay.session,
-    km:parseFloat(document.getElementById('edit-km')?.value)||st.modalDay.km,
+    km:numIn(document.getElementById('edit-km')?.value)||st.modalDay.km,
     desc:document.getElementById('edit-desc')?.value??st.modalDay.desc,
     sets:parseInt(document.getElementById('edit-sets')?.value)||st.modalDay.sets,
     type:t
@@ -770,7 +770,7 @@ function saveEdit(){
   const type=_editCurrentType;
   const session=(document.getElementById('edit-session')?.value||'').trim()||day.session;
   const desc=(document.getElementById('edit-desc')?.value||'').trim();
-  const km=type!=='FUERZA'&&type!=='DESCANSO'?parseFloat(document.getElementById('edit-km')?.value)||0:0;
+  const km=type!=='FUERZA'&&type!=='DESCANSO'?numIn(document.getElementById('edit-km')?.value)||0:0;
   const sets=type==='FUERZA'?parseInt(document.getElementById('edit-sets')?.value)||3:day.sets;
   const exercises=type==='FUERZA'?_editExercises.filter(e=>e.name.trim()):undefined;
 
@@ -851,7 +851,7 @@ function saveLog(){
   const th=parseInt(document.getElementById('m-th')?.value)||0;
   const tm=parseInt(document.getElementById('m-tm')?.value)||0;
   const ts2=parseInt(document.getElementById('m-ts')?.value)||0;
-  const dist=parseFloat(document.getElementById('m-dist')?.value)||0;
+  const dist=numIn(document.getElementById('m-dist')?.value)||0;
   const timeStr=th>0?`${th}:${String(tm).padStart(2,'0')}:${String(ts2).padStart(2,'0')}`:`${tm}:${String(ts2).padStart(2,'0')}`;
   let pace='';
   if(dist>0&&(th||tm||ts2)){const spk=(th*3600+tm*60+ts2)/dist;pace=`${Math.floor(spk/60)}:${String(Math.round(spk%60)).padStart(2,'0')}/km`;}
@@ -892,12 +892,12 @@ function renderStats(){
     let wkm=0,wm=0;
     w.days.forEach(d=>{
       const l=st.logs[d.id];
-      if(l?.distance)wkm+=parseFloat(l.distance)||0;
+      if(l?.distance)wkm+=numIn(l.distance)||0;
       if(l?.th!==undefined)wm+=(l.th||0)*60+(l.tm||0)+(l.ts||0)/60;
       else if(l?.time){const p=l.time.split(':').map(Number);wm+=(p[0]||0)*60+(p[1]||0);}
       if(d.date<TODAY&&d.type!=='DESCANSO'){
         adhPlan+=d.km||0;
-        adhKm+=parseFloat(l?.distance||0)||0;
+        adhKm+=numIn(l?.distance||0)||0;
       }
     });
     totKm+=wkm;totMins+=wm;totPlan+=w.totalKm;
@@ -915,7 +915,7 @@ function renderStats(){
     <div class="stat-card" style="border-color:#f4634a33"><div class="stat-val" style="color:#f4634a">${semAct}</div><div class="stat-lbl">semanas activas</div></div>`;
   if(st.chartKm){st.chartKm.destroy();st.chartKm=null;}
   if(st.chartT){st.chartT.destroy();st.chartT=null;}
-  const cOpts={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#4a4a5a',font:{size:10}}}},scales:{x:{ticks:{color:'#3a3a4a',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{color:'#141420'}},y:{ticks:{color:'#3a3a4a',font:{size:9}},grid:{color:'#141420'}}}};
+  const cOpts={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#4a4a5a',font:{size:10}}},tooltip:{callbacks:{label:(c)=>`${c.dataset.label}: ${fmtNum(c.parsed.y)}`}}},scales:{x:{ticks:{color:'#3a3a4a',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{color:'#141420'}},y:{ticks:{color:'#3a3a4a',font:{size:9}},grid:{color:'#141420'}}}};
   st.chartKm=new Chart(document.getElementById('chart-km').getContext('2d'),{type:'line',data:{labels:kmData.map(d=>d.lb),datasets:[
     {label:'Plan',data:kmData.map(d=>d.plan),borderColor:'#2a2a35',borderDash:[4,2],borderWidth:1.5,pointRadius:0,tension:.3},
     {label:'Real',data:kmData.map(d=>d.real),borderColor:'#52c9a0',backgroundColor:'#52c9a015',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#52c9a0',fill:true,tension:.3},
@@ -1396,18 +1396,18 @@ async function wizardGenerate(){
   document.getElementById('wz-error-footer').style.display='none';
 
   const raceName=document.getElementById('wz-name').value.trim();
-  const distance=parseFloat(document.getElementById('wz-distance').value);
+  const distance=numIn(document.getElementById('wz-distance').value);
   const elevation=parseInt(document.getElementById('wz-elevation').value)||0;
   const raceDate=document.getElementById('wz-date').value;
   const startDate=document.getElementById('wz-start-date').value;
   const easyPaceSec=parsePace(document.getElementById('wz-easy-pace').value)||400;
   const fastPaceSec=parsePace(document.getElementById('wz-fast-pace').value)||300;
-  const easyKm=parseFloat(document.getElementById('wz-easy-km').value)||10;
-  const maxKm=parseFloat(document.getElementById('wz-max-km').value)||20;
+  const easyKm=numIn(document.getElementById('wz-easy-km').value)||10;
+  const maxKm=numIn(document.getElementById('wz-max-km').value)||20;
   const weeksUntilRace=Math.max(4,Math.round((new Date(raceDate)-new Date(startDate))/(7*86400000)));
 
   document.getElementById('wz-gen-label').textContent='Diseñando tu plan de semanas...';
-  document.getElementById('wz-gen-sub').textContent=`${weeksUntilRace} semanas · ${distance}km`;
+  document.getElementById('wz-gen-sub').textContent=`${weeksUntilRace} semanas · ${fmtNum(distance)}km`;
 
   // Build schedule context from step 3
   const _dayNames=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -1555,7 +1555,7 @@ function importFromExcel(){
             curWeek={
               num:typeof wNum==='number'?wNum:null,
               phase:String(row[ix['Fase']]||'BASE'),
-              totalKm:Number(row[ix['Km_Semana']])||0,
+              totalKm:numIn(row[ix['Km_Semana']])||0,
               dates:'', days:[]
             };
             weeksArr.push(curWeek);
@@ -1575,7 +1575,7 @@ function importFromExcel(){
             label:String(row[ix['Día']]||''),
             session:String(row[ix['Sesión']]||''),
             type:tipo,
-            km:Number(row[ix['Km_Plan']])||0,
+            km:numIn(row[ix['Km_Plan']])||0,
             desc:String(row[ix['Descripción']]||'')
           };
           const sets=row[ix['Series']];
@@ -1594,7 +1594,7 @@ function importFromExcel(){
           if(kmReal||tReal){
             const pts=tReal.split(':');
             logsOut[dayId]={
-              distance:Number(kmReal)||0, time:tReal,
+              distance:numIn(kmReal)||0, time:tReal,
               h:Number(pts[0])||0, m:Number(pts[1])||0, s:Number(pts[2])||0
             };
           }

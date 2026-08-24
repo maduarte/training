@@ -113,7 +113,7 @@
         <div class="wizard-row" style="margin-top:0">
           <div style="flex:1">
             <div class="wizard-label">Distancia (km)</div>
-            <input class="wizard-input" id="wz-distance" type="number" placeholder="42" oninput="wizardValidate()">
+            <input class="wizard-input" id="wz-distance" type="text" inputmode="decimal" autocomplete="off" placeholder="42" oninput="decInput(this);wizardValidate()">
           </div>
           <div style="flex:1">
             <div class="wizard-label">Desnivel D+ (m)</div>
@@ -144,11 +144,11 @@
         <div class="wizard-row">
           <div style="flex:1">
             <div class="wizard-label">Distancia cómoda (km)</div>
-            <input class="wizard-input" id="wz-easy-km" type="number" placeholder="10">
+            <input class="wizard-input" id="wz-easy-km" type="text" inputmode="decimal" autocomplete="off" placeholder="10" oninput="decInput(this)">
           </div>
           <div style="flex:1">
             <div class="wizard-label">Distancia máxima (km)</div>
-            <input class="wizard-input" id="wz-max-km" type="number" placeholder="20">
+            <input class="wizard-input" id="wz-max-km" type="text" inputmode="decimal" autocomplete="off" placeholder="20" oninput="decInput(this)">
           </div>
         </div>
         <div class="wizard-label">Fecha de inicio del plan</div>
