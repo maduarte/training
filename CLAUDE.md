@@ -52,7 +52,9 @@ Testing local: `cd repo-root && python3 -m http.server 8080` (necesitas servidor
 - Analytics: gráficos km planificados vs reales, tiempo semanal
 - Fuerza: tarjetas individuales por ejercicio con descripción
 - Copia de seguridad automática en la nube vía `api/sync.js` (Upstash Redis) — sin token de GitHub en el browser
-- Onboarding wizard (pasos 1-3): crea nueva carrera preguntando nombre, fecha, distancia, desnivel, ritmos, disponibilidad semanal con variaciones fin de semana
+- Onboarding wizard (pasos 1-3): crea nueva carrera preguntando nombre, fecha, distancia, desnivel, ritmos, disponibilidad semanal con variaciones fin de semana.
+  Arma el plan con `buildPlanSkeleton()` **en local, sin IA** — un esqueleto editable, no un plan de entrenador.
+- Import/export Excel: el otro camino para crear planes (incluidos los que genere una IA fuera de la app). Formato documentado en el README.
 - PWA manifest con íconos (192 y 512px, base64 inline en app.js o index.html)
 
 ### Service Worker

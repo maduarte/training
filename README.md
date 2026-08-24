@@ -25,7 +25,7 @@ Gestiona un calendario de entrenamiento personalizado para preparar carreras de 
 
 **Multi-carrera**
 - Perfil único de atleta con múltiples carreras en secuencia
-- Wizard de 3 pasos para agregar nuevas carreras (genera el plan con Claude API)
+- Wizard de 3 pasos para agregar nuevas carreras (arma un esqueleto editable, sin IA)
 - Eliminar carreras con todos sus datos asociados
 
 **Sincronización**
@@ -52,7 +52,7 @@ training/
 ├── ui/
 │   └── styles.css        # Todos los estilos (~345 líneas)
 ├── api/
-│   └── generate-plan.js  # Vercel Serverless Function — proxy hacia Anthropic API
+│   └── sync.js           # Vercel Serverless Function — copia de seguridad (Upstash)
 └── assets/
     └── icon_base64.txt   # Ícono PWA en base64
 ```
@@ -103,7 +103,7 @@ Al abrir la app sin datos, se lanza el wizard de onboarding:
 1. **Tu perfil** — nombre + avatar (grid de emojis)
 2. **La carrera** — nombre, distancia, desnivel, fecha
 3. **Tu nivel** — ritmos (fácil/intenso), distancias referenciales, fecha de inicio, días de entrenamiento semanales, opción de fines de semana alternados
-4. **Generando...** — llama a `/api/generate-plan` (Vercel) → Claude API → guarda todo → lanza la app
+4. **Creando la estructura…** — `buildPlanSkeleton()` arma las semanas en local → guarda → lanza la app
 
 Para usuarios existentes (con `tw_last_rid` guardado), la app lanza directamente a la última carrera activa.
 
@@ -165,13 +165,54 @@ El banner "¿Ya tienes tu próxima carrera?" aparece automáticamente en semanas
 
 ---
 
-## Generación de planes con Claude API
+## Creación de planes
 
-El wizard llama al endpoint `/api/generate-plan` (Vercel Serverless Function en `api/generate-plan.js`), que hace de proxy hacia `https://api.anthropic.com/v1/messages` con el modelo `claude-sonnet-4-20250514`.
+Dos caminos, ninguno usa IA dentro de la app:
 
-La API key (`ANTHROPIC_API_KEY`) vive como variable de entorno en Vercel — nunca llega al browser. El endpoint hace un cap de 8000 tokens máximos por request.
+**1. Esqueleto del wizard** — `buildPlanSkeleton()` en `core/app.js` arma las semanas en el
+browser a partir de la fecha de carrera, los días disponibles y las distancias de referencia:
+fechas y etiquetas reales, un tipo por día (el largo cierra la semana), rampa de volumen con
+descarga cada 4 semanas, taper y día de carrera. Es un punto de partida para editar, no un
+plan de entrenador.
 
-El plan generado es JSON puro con el schema de `buildWeeks()` y se guarda directamente en `tw_races`.
+**2. Importar un Excel** — Ajustes → Importar. Sirve para planes hechos a mano o generados
+por una IA fuera de la app. El formato es el mismo que produce Exportar (ver más abajo).
+
+---
+
+## Formato del Excel
+
+Ajustes → **Exportar** produce un `.xlsx` con dos hojas. **Importar** las busca por nombre,
+así que el orden no importa, pero los nombres de hoja y de columna sí.
+
+### Hoja `Plan` — una fila por día
+
+| Columna | Contenido |
+|---|---|
+| `Semana` | Número de semana. Al cambiar de valor empieza una semana nueva |
+| `Fase` | Texto libre (`BASE`, `DESARROLLO`, `PICO`, `TAPER`, `CARRERA`…). Define el color |
+| `Km_Semana` | Total planificado de la semana |
+| `Fecha` | `YYYY-MM-DD` |
+| `Día` | Etiqueta visible, p. ej. `Sáb 22 Ago` |
+| `Tipo` | `SUAVE` · `MEDIO` · `INTENSO` · `FUERZA` · `DESCANSO` — cualquier otro valor rompe los colores |
+| `Km_Plan` | Distancia planificada. `0` en FUERZA y DESCANSO |
+| `Series` | Solo FUERZA: número de series |
+| `Sesión` | Título de la tarjeta |
+| `Descripción` | Texto largo. Admite saltos de línea |
+| `Ejercicios` | Solo FUERZA: `Nombre reps; Nombre reps` separados por `;` |
+| `Km_Real` | Distancia ejecutada (opcional) |
+| `Tiempo_Real` | `hh:mm:ss` (opcional) |
+| `Reacción` | 😊 · 😐 · 😞 (opcional) |
+
+Los nombres de `Ejercicios` que coinciden con las claves de `data/exercises.js` muestran su
+descripción al tocarlos; el resto se muestran sin ficha.
+
+### Hoja `Carrera` — una sola fila de datos
+
+| `Nombre` | `Fecha` | `Distancia_km` | `Desnivel_m` |
+|---|---|---|---|
+
+Importar **siempre crea una carrera nueva** (`import_<timestamp>`), nunca pisa una existente.
 
 ---
 
@@ -226,10 +267,10 @@ npx serve .
 # → http://localhost:3000
 ```
 
-**Stack completo** (incluye `/api/generate-plan`):
+**Stack completo** (incluye `/api/sync`):
 ```bash
 npm install -g vercel
-echo "ANTHROPIC_API_KEY=sk-ant-..." > .env.local
+vercel env pull .env.local   # trae las credenciales de Upstash
 vercel dev
 # → http://localhost:3000
 ```
@@ -250,7 +291,6 @@ git push origin main
 ```
 
 Variables de entorno requeridas en Vercel:
-- `ANTHROPIC_API_KEY` — clave de Anthropic para generación de planes
 - `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — copia de seguridad
   (la integración de Upstash en el Marketplace de Vercel las inyecta sola;
   también se aceptan los nombres antiguos `KV_REST_API_URL` / `KV_REST_API_TOKEN`)
@@ -263,6 +303,5 @@ No hay build step, no hay node_modules en el frontend, no hay bundler.
 
 - [Chart.js 4.4.0](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js) — gráficos
 - [Inter](https://fonts.google.com/specimen/Inter) + [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) — tipografía
-- Claude API (`claude-sonnet-4-20250514`) — generación de planes (vía proxy Vercel)
 - Upstash Redis (REST) — copia de seguridad, vía `api/sync.js`
 - GitHub Gist API — solo lectura del Gist de Garmin

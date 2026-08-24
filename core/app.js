@@ -1390,58 +1390,162 @@ function parsePace(str){
   return mins*60+secs;
 }
 
-async function wizardGenerate(){
+// ══════════════════════════════════════════════════
+// ESQUELETO DE PLAN (local, sin IA)
+// ══════════════════════════════════════════════════
+// Arma la estructura de semanas con las fechas reales, los días disponibles y
+// un volumen progresivo. No sustituye a un entrenador: es el punto de partida
+// que el atleta edita sesión a sesión, o reemplaza importando un Excel.
+
+const MONTH_ABBR=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const WEEK_ORDER=[1,2,3,4,5,6,0];   // lunes → domingo
+
+function ymdOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function parseYmd(s){const p=String(s).split('-').map(Number);return new Date(p[0],(p[1]||1)-1,p[2]||1);}
+function dayLabelOf(d){return `${DAY_LABELS[d.getDay()]} ${d.getDate()} ${MONTH_ABBR[d.getMonth()]}`;}
+function shortDateOf(d){return `${d.getDate()} ${MONTH_ABBR[d.getMonth()]}`;}
+
+const SKEL_FUERZA=[
+  {name:'Sentadilla',reps:'12'},
+  {name:'Estocada',reps:'12 c/lado'},
+  {name:'Peso muerto rumano',reps:'12'},
+  {name:'Elevación de talón',reps:'20'},
+  {name:'Plancha',reps:'40 seg'},
+  {name:'Bird-dog',reps:'10 c/lado'}
+];
+
+const SKEL_DESC={
+  SUAVE:'Rodaje suave, ritmo conversable de principio a fin.',
+  MEDIO:'Salida larga de la semana. Camina las subidas que no puedas sostener corriendo.',
+  INTENSO:'Sesión de calidad: 15min de calentamiento, bloque fuerte, 10min suave.',
+  FUERZA:'Fuerza de tren inferior y core. Edita los ejercicios desde la tarjeta.',
+  DESCANSO:'Descanso.'
+};
+
+// Reparto de tipos según cuántos días haya. El largo siempre cierra la semana.
+function skelPattern(k){
+  const base=['SUAVE','FUERZA','INTENSO','SUAVE','FUERZA','SUAVE'];
+  const out=base.slice(0,Math.max(0,k-1));
+  out.push('MEDIO');
+  return out;
+}
+
+function skelPhase(i,n){
+  if(i===n-1)return 'CARRERA';
+  if(i>=n-3)return 'TAPER';
+  const build=n-3;
+  if(i<Math.round(build*0.35))return 'BASE';
+  if(i<Math.round(build*0.75))return 'DESARROLLO';
+  return 'PICO';
+}
+
+function buildPlanSkeleton(cfg){
+  const {name,distance,raceDate,startDate,selectedDays,altWeekend,easyKm,maxKm}=cfg;
+  const race=parseYmd(raceDate);
+  const start=parseYmd(startDate);
+  // La semana arranca el lunes de la semana de inicio
+  const first=new Date(start);
+  first.setDate(first.getDate()-((first.getDay()+6)%7));
+  const n=Math.max(4,Math.ceil((race-first)/(7*86400000)+0.0001));
+  const raceYmd=ymdOf(race);
+  const weeks=[];
+
+  for(let i=0;i<n;i++){
+    const phase=skelPhase(i,n);
+
+    // Volumen del largo de la semana: rampa hasta el pico, con descargas
+    const peak=Math.max(1,n-4);
+    let longKm=easyKm+(maxKm-easyKm)*Math.min(1,i/peak);
+    if((i+1)%4===0) longKm*=0.75;
+    if(phase==='TAPER') longKm*=0.55;
+    longKm=Math.max(4,Math.round(longKm));
+
+    // Días disponibles de esta semana
+    let dows=selectedDays.slice();
+    if(altWeekend && i%2===1){
+      dows=dows.filter(d=>d!==0&&d!==6);
+      if(!dows.includes(5)) dows.push(5);   // el largo se adelanta al viernes
+    }
+    dows.sort((a,b)=>WEEK_ORDER.indexOf(a)-WEEK_ORDER.indexOf(b));
+    const types=skelPattern(dows.length);
+    const asignado={}; dows.forEach((d,j)=>asignado[d]=types[j]);
+
+    const days=[];
+    for(let k=0;k<7;k++){
+      const d=new Date(first);
+      d.setDate(d.getDate()+i*7+k);
+      const iso=ymdOf(d);
+      let type=asignado[d.getDay()]||'DESCANSO';
+      let km=0, session='Descanso', desc=SKEL_DESC[type], sets, exercises;
+
+      if(iso===raceYmd){
+        type='INTENSO'; km=distance||0;
+        session=`🎯 ${name}`;
+        desc='Día de carrera. Sal conservador y guarda algo para el último tercio.';
+      } else if(d>race){
+        type='DESCANSO'; session='Recuperación';
+        desc='Post-carrera: descanso o caminata suave.';
+      } else if(type==='MEDIO'){
+        km=longKm; session='Salida larga';
+      } else if(type==='INTENSO'){
+        km=Math.max(4,Math.round(longKm*0.55)); session='Sesión de calidad';
+      } else if(type==='SUAVE'){
+        km=Math.max(3,Math.round(longKm*0.5)); session='Rodaje suave';
+      } else if(type==='FUERZA'){
+        sets=3; exercises=SKEL_FUERZA.map(e=>({...e}));
+        session='Fuerza – Tren inferior y core';
+      }
+
+      const day={id:`w${i+1}d${k}`,date:iso,label:dayLabelOf(d),session,type,km,desc};
+      if(sets)day.sets=sets;
+      if(exercises)day.exercises=exercises;
+      days.push(day);
+    }
+
+    const ini=new Date(first); ini.setDate(ini.getDate()+i*7);
+    const fin=new Date(ini);   fin.setDate(fin.getDate()+6);
+    weeks.push({
+      num:i+1,
+      dates:`${shortDateOf(ini)} – ${shortDateOf(fin)}`,
+      phase,
+      totalKm:days.reduce((a,x)=>a+(x.km||0),0),
+      days
+    });
+  }
+  return weeks;
+}
+
+function wizardGenerate(){
   wizardShowStep('gen');
   document.getElementById('wz-error').classList.add('hidden');
   document.getElementById('wz-error-footer').style.display='none';
 
   const raceName=document.getElementById('wz-name').value.trim();
-  const distance=numIn(document.getElementById('wz-distance').value);
+  const distance=numIn(document.getElementById('wz-distance').value)||0;
   const elevation=parseInt(document.getElementById('wz-elevation').value)||0;
   const raceDate=document.getElementById('wz-date').value;
   const startDate=document.getElementById('wz-start-date').value;
   const easyPaceSec=parsePace(document.getElementById('wz-easy-pace').value)||400;
   const fastPaceSec=parsePace(document.getElementById('wz-fast-pace').value)||300;
   const easyKm=numIn(document.getElementById('wz-easy-km').value)||10;
-  const maxKm=numIn(document.getElementById('wz-max-km').value)||20;
-  const weeksUntilRace=Math.max(4,Math.round((new Date(raceDate)-new Date(startDate))/(7*86400000)));
-
-  document.getElementById('wz-gen-label').textContent='Diseñando tu plan de semanas...';
-  document.getElementById('wz-gen-sub').textContent=`${weeksUntilRace} semanas · ${fmtNum(distance)}km`;
-
-  // Build schedule context from step 3
-  const _dayNames=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const _daysStr=(WZ.selectedDays||[2,4,6]).map(d=>_dayNames[d]).join(', ');
-  const _altNote=WZ.altWeekend
-    ? '\n- Fines de semana alternados: SÍ. Un sábado disponible, el siguiente NO. Cuando el sábado está ocupado, el largo semanal se mueve al viernes y el sábado es DESCANSO.'
-    : '\n- Fines de semana: disponibles siempre.';
-
-  const prompt=`Genera un plan de entrenamiento de trail running para esta carrera:\n- Nombre: ${raceName}\n- Distancia: ${distance}km, Desnivel: ${elevation}m D+\n- Fecha carrera: ${raceDate}\n- Inicio plan: ${startDate} (${weeksUntilRace} semanas)\n- Nivel actual: cómodo a ${easyKm}km, máximo ${maxKm}km\n- Ritmo suave: ${Math.floor(easyPaceSec/60)}:${String(easyPaceSec%60).padStart(2,'0')}/km\n- Ritmo intenso: ${Math.floor(fastPaceSec/60)}:${String(fastPaceSec%60).padStart(2,'0')}/km\n\nEstructura semanal:\n- Días de entrenamiento: ${_daysStr}${_altNote}\n- Usar SOLO esos días para entrenamientos. Los demás días son DESCANSO.\n\nIMPORTANTE: Responde SOLO con JSON válido, sin markdown, sin texto adicional. Usa este schema exacto:\n[\n  {\n    \"num\": 1,\n    \"dates\": \"1–7 Mar\",\n    \"phase\": \"BASE\",\n    \"totalKm\": 25,\n    \"days\": [\n      {\"id\":\"w1d0\",\"date\":\"2026-03-02\",\"label\":\"Lun 2 Mar\",\"session\":\"Rodaje suave\",\"type\":\"SUAVE\",\"km\":8,\"desc\":\"Descripción.\"},\n      {\"id\":\"w1d1\",\"date\":\"2026-03-03\",\"label\":\"Mar 3 Mar\",\"session\":\"Fuerza – Tren inferior\",\"type\":\"FUERZA\",\"km\":0,\"sets\":3,\"desc\":\"Descripción.\",\"exercises\":[{\"name\":\"Sentadilla\",\"reps\":\"12\"},{\"name\":\"Plancha\",\"reps\":\"30 seg\"}]},\n      {\"id\":\"w1d2\",\"date\":\"2026-03-04\",\"label\":\"Mié 4 Mar\",\"session\":\"Descanso\",\"type\":\"DESCANSO\",\"km\":0,\"desc\":\"Descanso activo.\"}\n    ]\n  }\n]\n\nFases: BASE (25%), DESARROLLO (30%), PICO (25%), TAPER (2 semanas), CARRERA (1 semana), RECUPERACIÓN (2 semanas).\n3-4 sesiones por semana (1-2 FUERZA, resto SUAVE/MEDIO/INTENSO/DESCANSO).\nFase CARRERA: el día de la carrera tiene type INTENSO, km=${distance}.\nIDs de días: patrón wNdM (N=semana, M=índice). Fechas en YYYY-MM-DD.`;
+  const maxKm=Math.max(easyKm,numIn(document.getElementById('wz-max-km').value)||20);
 
   try{
-    const resp=await fetch('/api/generate-plan',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:8000,messages:[{role:'user',content:prompt}]})
+    if(!raceName||!raceDate) throw new Error('Faltan el nombre o la fecha de la carrera.');
+    if(parseYmd(raceDate)<=parseYmd(startDate)) throw new Error('La carrera debe ser posterior al inicio del plan.');
+
+    const weeks=buildPlanSkeleton({
+      name:raceName, distance, raceDate, startDate,
+      selectedDays:WZ.selectedDays||[2,4,6], altWeekend:!!WZ.altWeekend,
+      easyKm, maxKm
     });
-    if(!resp.ok) throw new Error(`API error ${resp.status}`);
-    const data=await resp.json();
-    const text=data.content?.map(c=>c.text||'').join('').trim();
-    let weeks;
-    try{
-      const clean=text.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim();
-      weeks=JSON.parse(clean);
-    }catch(e){ throw new Error('No se pudo parsear el plan. Intenta de nuevo.'); }
-    if(!Array.isArray(weeks)||!weeks.length) throw new Error('El plan generado está vacío.');
 
     const raceId='race_'+Date.now();
     const newRace={id:raceId,name:raceName,date:raceDate,distance,elevation,defaultTitle:`⛰ ${raceName}`,weeks,status:'upcoming'};
 
     if(WZ.isOnboarding){
-      // Save profile
       const profileName=document.getElementById('wz-profile-name').value.trim();
       S.set('tw_profile',{name:profileName,avatar:WZ.selectedAvatar,easy_pace:easyPaceSec,fast_pace:fastPaceSec});
-      // Save as first custom race (overrides hardcoded Torrencial on auto-launch)
       const custom=S.get('tw_races')||[];
       custom.unshift(newRace);
       S.set('tw_races',custom);
@@ -1451,18 +1555,15 @@ async function wizardGenerate(){
       S.set('tw_races',custom);
     }
 
-    document.getElementById('wz-gen-label').textContent='¡Plan listo! 🎉';
-    document.getElementById('wz-gen-sub').textContent=`${weeks.length} semanas generadas`;
-    setTimeout(()=>{
-      closeWizard();
-      launchApp('mauricio',raceId);
-    },1200);
+    document.getElementById('wz-gen-label').textContent='Plan creado 🎉';
+    document.getElementById('wz-gen-sub').textContent=`${weeks.length} semanas · ahora edítalo a tu gusto`;
+    setTimeout(()=>{ closeWizard(); launchApp('mauricio',raceId); },900);
   }catch(err){
     const errEl=document.getElementById('wz-error');
     errEl.textContent='✗ '+err.message;
     errEl.classList.remove('hidden');
     document.getElementById('wz-error-footer').style.display='flex';
-    document.getElementById('wz-gen-label').textContent='Error al generar el plan';
+    document.getElementById('wz-gen-label').textContent='No se pudo crear el plan';
     document.getElementById('wz-gen-sub').textContent='';
   }
 }
@@ -1480,7 +1581,11 @@ function exportToExcel(){
     ['Nombre','Fecha','Distancia_km','Desnivel_m'],
     [race.name, race.date, race.distance||0, race.elevation||0]
   ]);
-  XLSX.utils.book_append_sheet(wb,raceWs,'Carrera');
+  // El día a día va primero: es la hoja que abre Excel por defecto, y tener
+  // el resumen delante hacía pensar que la exportación solo traía totales.
+  //   hoja 1 "Plan"    → una fila por día
+  //   hoja 2 "Carrera" → metadatos de la carrera
+  // La importación busca las hojas por nombre, así que el orden es libre.
 
   // Sheet 2: full plan
   const hdrs=['Semana','Fase','Km_Semana','Fecha','Día','Tipo','Km_Plan','Series','Sesión','Descripción','Ejercicios','Km_Real','Tiempo_Real','Reacción'];
@@ -1509,6 +1614,7 @@ function exportToExcel(){
     {wch:9},{wch:7},{wch:32},{wch:50},{wch:40},{wch:9},{wch:12},{wch:8}
   ];
   XLSX.utils.book_append_sheet(wb,planWs,'Plan');
+  XLSX.utils.book_append_sheet(wb,raceWs,'Carrera');
 
   const fname=`${(race.name||'plan').replace(/\s+/g,'-')}_${race.date}.xlsx`;
   XLSX.writeFile(wb,fname);
