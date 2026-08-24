@@ -29,7 +29,7 @@ Gestiona un calendario de entrenamiento personalizado para preparar carreras de 
 - Eliminar carreras con todos sus datos asociados
 
 **Sincronización**
-- Sync cross-device vía GitHub Gist (Personal Access Token)
+- Copia de seguridad automática en la nube (backend propio, sin tokens)
 - Indicador de estado en el botón ⚙️ del header (dirty / synced / error)
 
 ---
@@ -74,8 +74,9 @@ El código está separado en módulos cargados desde `index.html`. No hay build 
 | `tw_last_rid` | Última carrera activa (para auto-launch) |
 | `tw_last_aid` | Último atleta activo |
 | `tw_migrated` | Flag de migración de schema antiguo |
-| `tw_sync_pat` | GitHub Personal Access Token |
-| `tw_sync_gist_id` | ID del Gist de sincronización |
+| `tw_sync_code` | Código de sync (credencial de la copia en la nube) |
+| `tw_sync_mtimes` | Marca de tiempo por clave, para el merge |
+| `tw_sync_ts` | Fecha de la última copia |
 
 ### Flujo de datos de carreras
 
@@ -193,16 +194,22 @@ Estrategias de caché por tipo de recurso:
 | `fonts.gstatic.com` (fuentes) | Cache First permanente | ✅ tras primera visita |
 | `api.github.com` / `/api/*` | Network Only + 503 graceful | ❌ requiere red |
 
-Las funciones que requieren red (sync con Gist, generación de planes) devuelven un error claro sin romper la app.
+Las funciones que requieren red (copia en la nube, generación de planes) devuelven un error claro sin romper la app.
 
 ---
 
-## Sincronización GitHub Gist
+## Copia de seguridad en la nube
 
-1. Crear un [Personal Access Token](https://github.com/settings/tokens) con scope `gist`
-2. Abrir ⚙️ → Sync → pegar el token
-3. **Subir** crea o actualiza un Gist privado con todas las claves `tw_*`
-4. **Bajar** restaura los datos desde el Gist en otro dispositivo
+Endpoint propio (`api/sync.js`) sobre Redis de Upstash. No hay token de GitHub en el browser.
+
+1. Primer dispositivo: ⚙️ → Sync → **Crear código**. Se genera una credencial de 32 hex y se sube todo lo que haya.
+2. Dispositivos siguientes: ⚙️ → Sync → pegar ese código → **Vincular**. La nube reemplaza lo local.
+3. A partir de ahí es automático: sube ~2,5 s después de cada cambio y al cerrar la app; baja al abrirla.
+
+El merge es last-write-wins **por clave** (`tw_sync_mtimes`), así que dos dispositivos que
+tocaron cosas distintas no se pisan. La excepción es **Vincular**, donde el remoto gana en todo.
+
+El código de sync es la credencial: quien lo tiene, ve los datos. No hay otra capa de auth.
 
 El indicador de estado en ⚙️:
 - Sin borde → sync no configurado
@@ -242,8 +249,11 @@ git commit -m "update"
 git push origin main
 ```
 
-Variable de entorno requerida en Vercel:
+Variables de entorno requeridas en Vercel:
 - `ANTHROPIC_API_KEY` — clave de Anthropic para generación de planes
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — copia de seguridad
+  (la integración de Upstash en el Marketplace de Vercel las inyecta sola;
+  también se aceptan los nombres antiguos `KV_REST_API_URL` / `KV_REST_API_TOKEN`)
 
 No hay build step, no hay node_modules en el frontend, no hay bundler.
 
@@ -254,4 +264,5 @@ No hay build step, no hay node_modules en el frontend, no hay bundler.
 - [Chart.js 4.4.0](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js) — gráficos
 - [Inter](https://fonts.google.com/specimen/Inter) + [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) — tipografía
 - Claude API (`claude-sonnet-4-20250514`) — generación de planes (vía proxy Vercel)
-- GitHub Gist API — sincronización (opcional)
+- Upstash Redis (REST) — copia de seguridad, vía `api/sync.js`
+- GitHub Gist API — solo lectura del Gist de Garmin

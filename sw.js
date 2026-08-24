@@ -3,7 +3,7 @@
 // Bump CACHE_NAME cuando cambies cualquier archivo local
 // ══════════════════════════════════════════════════
 
-const CACHE_NAME = 'ncs-trail-v7';
+const CACHE_NAME = 'ncs-trail-v8';
 const FONT_CACHE = 'ncs-fonts-v1';  // caché separada y long-lived para fuentes
 
 // ── Archivos pre-cacheados en la instalación ───────
@@ -52,7 +52,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (!url.protocol.startsWith('http')) return;
 
-  // ── 1. APIs de red: GitHub Gist + endpoint de generación de planes
+  // ── 1. APIs de red: Gist de Garmin, /api/sync y /api/generate-plan
   //       Network Only. Sin conexión estas funciones simplemente no operan.
   if (
     url.hostname === 'api.github.com' ||

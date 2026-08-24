@@ -52,7 +52,7 @@ function openSettings(){
     <button class="settings-new-race-btn" onclick="closeSettings();openNewRaceWizard()">+ Nueva carrera</button>
     <div class="settings-section-label" style="margin-top:16px">DATOS</div>
     <div class="settings-row">
-      <div><div class="settings-row-label">Sincronización</div><div class="settings-row-sub">GitHub Gist</div></div>
+      <div><div class="settings-row-label">Sincronización</div><div class="settings-row-sub">Copia de seguridad en la nube</div></div>
       <button class="settings-row-action" onclick="closeSettings();openSyncModal()">Sync →</button>
     </div>
     <div class="settings-section-label" style="margin-top:16px">EXCEL</div>
@@ -985,202 +985,265 @@ setupPWA();
 initTitle();
 
 // ══════════════════════════════════════════════════
-// GITHUB GIST SYNC
+// SYNC (backend propio — /api/sync)
 // ══════════════════════════════════════════════════
-const GIST_FILENAME = 'nadie-corre-solo-backup.json';
+// El "código de sync" (32 hex) es la credencial: se genera solo en el primer
+// dispositivo y se copia a los demás. Ya no hay token de GitHub en el browser.
+// Sube solo tras cada cambio (con debounce) — el backup deja de depender de
+// que te acuerdes de pulsar un botón.
 
-function syncGetPAT(){ return localStorage.getItem('tw_sync_pat')||''; }
-function syncGetGistId(){ return localStorage.getItem('tw_sync_gist_id')||''; }
+const SYNC_ENDPOINT   = '/api/sync';
+const SYNC_CODE_RE    = /^[a-f0-9]{32}$/;
+const SYNC_DEBOUNCE_MS= 2500;
+// Claves que no marcan "hay cambios sin subir" (ruido de navegación).
+const SYNC_SKIP_KEYS  = /^tw_(last_rid|last_aid|migrated)$/;
 
+function syncGetCode(){ return localStorage.getItem('tw_sync_code')||''; }
+
+function syncNewCode(){
+  const b=new Uint8Array(16); crypto.getRandomValues(b);
+  return Array.from(b, x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+function syncFmtTs(ts){
+  if(!ts) return '';
+  const d=new Date(Number(ts));
+  const hoy=new Date().toDateString()===d.toDateString();
+  return (hoy?'hoy a las ':d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'})+' ')
+       + d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Marca de tiempo por clave ──────────────────────────────────
+// Permite hacer merge fino: si dos dispositivos tocaron cosas distintas,
+// no se pisan. Antes el sync era "el último que sube gana todo".
+function syncMtimes(){
+  try{ return JSON.parse(localStorage.getItem('tw_sync_mtimes'))||{}; }catch(e){ return {}; }
+}
+function syncSaveMtimes(m){
+  try{ localStorage.setItem('tw_sync_mtimes', JSON.stringify(m)); }catch(e){}
+}
+function syncTouch(k){
+  const m=syncMtimes(); m[k]=Date.now(); syncSaveMtimes(m);
+}
+
+function syncExportAll(){
+  const m=syncMtimes(), keys={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(!k || !k.startsWith('tw_') || k.startsWith('tw_sync_')) continue;
+    let v; try{ v=JSON.parse(localStorage.getItem(k)); }catch(e){ v=localStorage.getItem(k); }
+    keys[k]={v, t:m[k]||0};
+  }
+  return {_v:2, keys};
+}
+
+// force = el remoto gana en todas las claves (al vincular un dispositivo nuevo).
+function syncImportAll(remote, force=false){
+  if(!remote || !remote.keys) return 0;
+  const m=syncMtimes(); let applied=0;
+  Object.entries(remote.keys).forEach(([k,entry])=>{
+    if(!k.startsWith('tw_') || k.startsWith('tw_sync_')) return;
+    const rt=entry?.t||0, lt=m[k]||0;
+    if(!force){
+      if(rt<lt) return;                                        // lo local es más nuevo
+      if(rt===lt && localStorage.getItem(k)!==null) return;     // empate: no toques nada
+    }
+    try{ localStorage.setItem(k, JSON.stringify(entry.v)); }catch(e){ return; }
+    m[k]=force?Date.now():rt; applied++;
+  });
+  syncSaveMtimes(m);
+  return applied;
+}
+
+// ── UI ─────────────────────────────────────────────────────────
 function syncSetStatus(msg, cls=''){
-  const el = document.getElementById('sync-status');
-  el.textContent = msg;
-  el.className = 'sync-status' + (cls ? ' '+cls : '');
+  const el=document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent=msg;
+  el.className='sync-status'+(cls?' '+cls:'');
 }
 
 function syncSetBtnState(state){
-  const btn = document.getElementById('hdr-settings');
-  btn.classList.toggle('syncing', !!state);
+  document.getElementById('hdr-settings')?.classList.toggle('syncing', !!state);
+}
+
+function updateSyncBadge(dirty=false){
+  const btn=document.getElementById('hdr-settings');
+  if(!btn) return;
+  if(!syncGetCode()){ btn.classList.remove('dirty','synced','error','syncing'); return; }
+  if(dirty){ btn.classList.add('dirty'); btn.classList.remove('synced','error'); }
+  else { btn.classList.remove('dirty','error'); btn.classList.add('synced'); }
+}
+
+function syncRenderModal(){
+  const code=syncGetCode();
+  const input=document.getElementById('sync-code');
+  const linked=document.getElementById('sync-linked');
+  const unlinked=document.getElementById('sync-unlinked');
+  if(input) input.value='';
+  if(linked)   linked.style.display   = code?'block':'none';
+  if(unlinked) unlinked.style.display = code?'none':'block';
+  const codeEl=document.getElementById('sync-code-display');
+  if(codeEl) codeEl.textContent = code ? code.replace(/(.{8})/g,'$1 ').trim() : '';
+  if(code){
+    const ts=localStorage.getItem('tw_sync_ts');
+    syncSetStatus(ts?('Conectado · última copia '+syncFmtTs(ts)):'Conectado · sin copia todavía','ok');
+  } else {
+    syncSetStatus('Este dispositivo no está sincronizado.');
+  }
 }
 
 function openSyncModal(){
-  const modal = document.getElementById('sync-modal');
-  modal.classList.add('show');
-  const pat = syncGetPAT();
-  if(pat) document.getElementById('sync-pat').value = pat;
-  const gistId = syncGetGistId();
-  if(gistId) document.getElementById('sync-gist-manual').value = gistId;
-  if(pat && gistId){
-    syncSetStatus('Conectado · Gist: ' + gistId.slice(0,8) + '…', 'ok');
-  } else if(pat){
-    syncSetStatus('Token guardado. Pulsa ⬆ Subir para crear el Gist.');
-  } else {
-    syncSetStatus('Sin configurar — introduce tu token para comenzar.');
-  }
+  document.getElementById('sync-modal').classList.add('show');
+  syncRenderModal();
 }
 
 function closeSyncModal(){
-  // Save PAT on close
-  const pat = document.getElementById('sync-pat').value.trim();
-  if(pat) localStorage.setItem('tw_sync_pat', pat);
   document.getElementById('sync-modal').classList.remove('show');
 }
 
+function syncCopyCode(){
+  const code=syncGetCode();
+  if(!code) return;
+  navigator.clipboard?.writeText(code)
+    .then(()=>syncSetStatus('✓ Código copiado al portapapeles.','ok'))
+    .catch(()=>syncSetStatus('No se pudo copiar. Anótalo a mano.','err'));
+}
+
+// Primer dispositivo: genera código y sube lo que ya hay.
+async function syncCreate(){
+  localStorage.setItem('tw_sync_code', syncNewCode());
+  const m=syncMtimes(), now=Date.now();
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k && k.startsWith('tw_') && !k.startsWith('tw_sync_') && !m[k]) m[k]=now;
+  }
+  syncSaveMtimes(m);
+  syncRenderModal();
+  await syncPush();
+}
+
+// Dispositivo adicional: pega el código del primero. El remoto manda.
+async function syncLink(){
+  const raw=document.getElementById('sync-code').value.trim().toLowerCase().replace(/\s+/g,'');
+  if(!SYNC_CODE_RE.test(raw)){
+    syncSetStatus('El código debe tener 32 caracteres (a-f, 0-9).','err'); return;
+  }
+  if(!confirm('Vincular este dispositivo: los datos de la nube reemplazan los locales. ¿Continuar?')) return;
+  syncSetBtnState(true);
+  syncSetStatus('Vinculando…');
+  try{
+    const res=await fetch(`${SYNC_ENDPOINT}?code=${raw}`);
+    const json=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(json.error||'Error '+res.status);
+    if(!json.data) throw new Error('No hay datos guardados con ese código.');
+    localStorage.setItem('tw_sync_code', raw);
+    syncImportAll(json.data, true);
+    localStorage.setItem('tw_sync_ts', String(json.updatedAt||Date.now()));
+    syncRenderModal();
+    syncSetStatus('✓ Vinculado. Recargando…','ok');
+    setTimeout(()=>location.reload(), 900);
+  }catch(err){
+    syncSetStatus('✗ '+err.message,'err');
+  }finally{ syncSetBtnState(false); }
+}
+
 function syncDisconnect(){
-  if(!confirm('¿Desconectar sync? Los datos locales no se borran.')) return;
-  localStorage.removeItem('tw_sync_pat');
-  localStorage.removeItem('tw_sync_gist_id');
-  document.getElementById('sync-pat').value = '';
-  syncSetStatus('Desconectado.');
+  if(!confirm('¿Desconectar este dispositivo? Los datos locales no se borran, pero dejan de respaldarse.')) return;
+  localStorage.removeItem('tw_sync_code');
+  localStorage.removeItem('tw_sync_ts');
+  syncRenderModal();
   updateSyncBadge();
 }
 
-// Collect all localStorage keys for this app
-function syncExportAll(){
-  const data = { _ts: Date.now(), _v: 1 };
-  for(let i=0; i<localStorage.length; i++){
-    const k = localStorage.key(i);
-    if(k && k.startsWith('tw_') && !k.startsWith('tw_sync_')){
-      try{ data[k] = JSON.parse(localStorage.getItem(k)); }
-      catch(e){ data[k] = localStorage.getItem(k); }
-    }
-  }
-  return data;
-}
-
-// Write all keys from gist data to localStorage (last-write-wins by _ts)
-function syncImportAll(remote){
-  const localTs = parseInt(localStorage.getItem('tw_sync_ts')||'0');
-  const remoteTs = parseInt(remote._ts||'0');
-  // Merge: for each key, keep whichever is newer by overall timestamp
-  // Simple strategy: if remote is newer overall, apply all keys
-  Object.keys(remote).forEach(k => {
-    if(k.startsWith('_')) return; // skip meta
-    localStorage.setItem(k, JSON.stringify(remote[k]));
-  });
-  localStorage.setItem('tw_sync_ts', remoteTs.toString());
-}
-
-async function syncPush(){
-  const pat = document.getElementById('sync-pat').value.trim() || syncGetPAT();
-  if(!pat){ syncSetStatus('Introduce tu token primero.', 'err'); return; }
-  localStorage.setItem('tw_sync_pat', pat);
-
-  syncSetBtnState(true);
-  syncSetStatus('Subiendo…');
-
-  const payload = syncExportAll();
-  const content = JSON.stringify(payload, null, 2);
-  const gistId = syncGetGistId();
-  const headers = {
-    'Authorization': 'Bearer ' + pat,
-    'Content-Type': 'application/json',
-    'Accept': 'application/vnd.github.v3+json'
-  };
-
-  try {
-    let res, json;
-    if(gistId){
-      // Update existing gist
-      res = await fetch('https://api.github.com/gists/' + gistId, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ files: { [GIST_FILENAME]: { content } } })
-      });
-    } else {
-      // Create new gist
-      res = await fetch('https://api.github.com/gists', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          description: 'Nadie Corre Solo — Training Data Backup',
-          public: false,
-          files: { [GIST_FILENAME]: { content } }
-        })
-      });
-    }
-    json = await res.json();
-    if(res.status === 401) throw new Error('Token inválido o expirado. Genera un nuevo token en GitHub.');
-    if(res.status === 403) throw new Error('El token no tiene permiso de Gist. Activa el scope "gist" al crearlo.');
-    if(res.status === 404) throw new Error('Gist no encontrado. El ID puede ser incorrecto.');
-    if(!res.ok) throw new Error(json.message || 'Error ' + res.status);
-
-    localStorage.setItem('tw_sync_gist_id', json.id);
-    localStorage.setItem('tw_sync_ts', payload._ts.toString());
-    const ts = new Date(payload._ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-    syncSetStatus('✓ Subido a las ' + ts + ' · Gist: ' + json.id.slice(0,8) + '…', 'ok');
-    updateSyncBadge(false);
-  } catch(err){
-    syncSetStatus('✗ Error: ' + err.message, 'err');
-  } finally {
-    syncSetBtnState(false);
-  }
-}
-
-async function syncPull(){
-  const pat = document.getElementById('sync-pat').value.trim() || syncGetPAT();
-  if(!pat){ syncSetStatus('Introduce tu token primero.', 'err'); return; }
-  const manualId = document.getElementById('sync-gist-manual')?.value.trim();
-  if(manualId){ localStorage.setItem('tw_sync_gist_id', manualId); }
-  const gistId = syncGetGistId() || manualId;
-  if(!gistId){ syncSetStatus('No hay Gist vinculado. Introduce el Gist ID o sube primero desde el dispositivo principal.', 'err'); return; }
-  
-  syncSetBtnState(true);
-  syncSetStatus('Bajando…');
-
-  try {
-    const res = await fetch('https://api.github.com/gists/' + gistId, {
-      headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github.v3+json' }
+// ── Transporte ─────────────────────────────────────────────────
+async function syncPush(silent=false){
+  const code=syncGetCode();
+  if(!code){ if(!silent) syncSetStatus('Primero crea o vincula un código.','err'); return false; }
+  if(!silent){ syncSetBtnState(true); syncSetStatus('Subiendo…'); }
+  try{
+    const res=await fetch(`${SYNC_ENDPOINT}?code=${code}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(syncExportAll())
     });
-    const json = await res.json();
-    if(res.status === 401) throw new Error('Token inválido o expirado. Genera un nuevo token en GitHub.');
-    if(res.status === 403) throw new Error('El token no tiene permiso de Gist. Asegúrate de activar el scope "gist" al crearlo.');
-    if(res.status === 404) throw new Error('Gist no encontrado. Verifica el ID o sube primero desde el dispositivo principal.');
-    if(!res.ok) throw new Error(json.message || 'Error ' + res.status);
-
-    const fileContent = json.files?.[GIST_FILENAME]?.content;
-    if(!fileContent) throw new Error('Archivo no encontrado en el Gist.');
-
-    const remote = JSON.parse(fileContent);
-    syncImportAll(remote);
-
-    const ts = new Date(parseInt(remote._ts||Date.now())).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-    syncSetStatus('✓ Datos bajados (guardados: ' + ts + ') · Recarga para aplicar.', 'ok');
+    const json=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(json.error||'Error '+res.status);
+    localStorage.setItem('tw_sync_ts', String(json.updatedAt||Date.now()));
     updateSyncBadge(false);
-
-    // Reload data in-memory without full page reload
-    setTimeout(()=>{
-      closeSyncModal();
-      if(st.raceId) launchApp(st.athleteId||'mauricio', st.raceId);
-    }, 1200);
-  } catch(err){
-    syncSetStatus('✗ Error: ' + err.message, 'err');
-  } finally {
-    syncSetBtnState(false);
-  }
+    if(!silent) syncSetStatus('✓ Guardado '+syncFmtTs(json.updatedAt),'ok');
+    return true;
+  }catch(err){
+    document.getElementById('hdr-settings')?.classList.add('error');
+    if(!silent) syncSetStatus('✗ '+err.message,'err');
+    return false;
+  }finally{ if(!silent) syncSetBtnState(false); }
 }
 
-// Show dirty dot when data changes and hasn't been pushed
-function updateSyncBadge(dirty=false){
-  const btn = document.getElementById('hdr-settings');
-  if(!btn) return;
-  if(!syncGetPAT()){ btn.classList.remove('dirty','synced','error','syncing'); return; }
-  if(dirty){ btn.classList.add('dirty'); btn.classList.remove('synced','error'); }
-  else { btn.classList.remove('dirty'); btn.classList.toggle('synced', !!syncGetGistId()); }
+async function syncPull(silent=false){
+  const code=syncGetCode();
+  if(!code){ if(!silent) syncSetStatus('Primero crea o vincula un código.','err'); return false; }
+  if(!silent){ syncSetBtnState(true); syncSetStatus('Bajando…'); }
+  try{
+    const res=await fetch(`${SYNC_ENDPOINT}?code=${code}`);
+    const json=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(json.error||'Error '+res.status);
+    if(!json.data){
+      if(!silent) syncSetStatus('No hay copia en la nube todavía. Pulsa ⬆ Subir.','err');
+      return false;
+    }
+    const applied=syncImportAll(json.data);
+    localStorage.setItem('tw_sync_ts', String(json.updatedAt||Date.now()));
+    updateSyncBadge(false);
+    if(!silent) syncSetStatus(applied?('✓ '+applied+' cambios bajados. Recargando…'):'✓ Ya estabas al día.','ok');
+    if(applied){
+      if(silent){ if(st.raceId) launchApp(st.athleteId||'mauricio', st.raceId); }
+      else setTimeout(()=>location.reload(), 900);
+    }
+    return true;
+  }catch(err){
+    if(!silent) syncSetStatus('✗ '+err.message,'err');
+    return false;
+  }finally{ if(!silent) syncSetBtnState(false); }
 }
 
-// Close modal on backdrop click (delegated — safe regardless of DOM order)
+// ── Auto-push con debounce ─────────────────────────────────────
+let _syncTimer=null;
+function syncSchedulePush(){
+  if(!syncGetCode()) return;
+  clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(()=>{ _syncTimer=null; syncPush(true); }, SYNC_DEBOUNCE_MS);
+}
+function syncFlush(){
+  if(_syncTimer){ clearTimeout(_syncTimer); _syncTimer=null; syncPush(true); }
+}
+window.addEventListener('pagehide', syncFlush);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') syncFlush(); });
+
+// Cierra el modal al tocar el fondo
 document.addEventListener('click', e=>{
-  if(e.target && e.target.id === 'sync-modal') closeSyncModal();
+  if(e.target && e.target.id==='sync-modal') closeSyncModal();
 });
 
-// Mark dirty on any S.set call — patch S
+// ── Enganche con el storage ────────────────────────────────────
 const _origSset = S.set.bind(S);
-const SYNC_SKIP_KEYS=/^tw_(last_rid|last_aid|migrated|sync_pat|sync_gist)$/;
-S.set = function(k,v){ _origSset(k,v); if(syncGetPAT()&&!SYNC_SKIP_KEYS.test(k)) updateSyncBadge(true); };
+S.set = function(k,v){
+  _origSset(k,v);
+  if(typeof k!=='string' || k.startsWith('tw_sync_')) return;
+  syncTouch(k);
+  if(syncGetCode() && !SYNC_SKIP_KEYS.test(k)){ updateSyncBadge(true); syncSchedulePush(); }
+};
 
-// Init badge on load
+// Migración desde el sync antiguo por Gist: el PAT ya no se usa.
+if(localStorage.getItem('tw_sync_pat')){
+  localStorage.removeItem('tw_sync_pat');
+  localStorage.removeItem('tw_sync_gist_id');
+  localStorage.removeItem('tw_sync_ts');
+}
+
 updateSyncBadge(false);
+// Al abrir la app, trae lo que haya en la nube.
+if(syncGetCode()) setTimeout(()=>syncPull(true), 400);
 
 // ══════════════════════════════════════════════════════════
 // WIZARD (nueva carrera + onboarding first-launch)

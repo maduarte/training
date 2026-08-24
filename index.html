@@ -285,30 +285,47 @@
 <!-- SYNC MODAL -->
 <div id="sync-modal">
   <div id="sync-box">
-    <div class="sync-title">☁️ Sync con GitHub</div>
-    <div class="sync-sub">Tus datos se guardan en un Gist privado de GitHub y se sincronizan entre dispositivos.</div>
-    <div class="sync-lbl">Personal Access Token</div>
-    <input class="sync-input" id="sync-pat" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="margin-bottom:8px">
-    <div class="sync-lbl" style="margin-top:8px">Gist ID <span style="color:#555;font-weight:400">(opcional - solo si ya existe en otro dispositivo)</span></div>
-    <input class="sync-input" id="sync-gist-manual" type="text" placeholder="ej: a1b2c3d4e5f6..." style="margin-bottom:8px">
-    <div class="sync-help" style="margin-bottom:16px">
-      Genera uno en <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a> con scope <strong style="color:#fff">gist</strong> únicamente.
+    <div class="sync-title">☁️ Copia de seguridad</div>
+    <div class="sync-sub">Tus entrenamientos se guardan solos en la nube después de cada cambio. Para verlos en otro dispositivo, usa el mismo código de sync.</div>
+
+    <!-- Sin vincular -->
+    <div id="sync-unlinked">
+      <div class="sync-help" style="margin-bottom:16px">
+        Si es tu primer dispositivo, crea un código nuevo. Si ya tienes uno, pégalo aquí para traer tus datos.
+      </div>
+      <div class="sync-lbl">Código de sync existente</div>
+      <input class="sync-input" id="sync-code" type="text" inputmode="latin" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="32 caracteres" style="margin-bottom:12px">
+      <div class="sync-row">
+        <button class="sync-btn-sm primary" onclick="syncCreate()">✨ Crear código</button>
+        <button class="sync-btn-sm" onclick="syncLink()">🔗 Vincular</button>
+      </div>
     </div>
+
+    <!-- Vinculado -->
+    <div id="sync-linked" style="display:none">
+      <div class="sync-lbl">Tu código de sync</div>
+      <div class="sync-code-box" id="sync-code-display"></div>
+      <div class="sync-help" style="margin-bottom:16px">
+        Guárdalo. Es la llave de tus datos: quien lo tenga, los ve.
+      </div>
+      <div class="sync-row">
+        <button class="sync-btn-sm primary" onclick="syncCopyCode()">📋 Copiar</button>
+        <button class="sync-btn-sm" onclick="syncPush()">⬆ Subir</button>
+        <button class="sync-btn-sm" onclick="syncPull()">⬇ Bajar</button>
+      </div>
+    </div>
+
     <div class="sync-lbl">Estado</div>
     <div class="sync-status" id="sync-status">Sin configurar</div>
-    <div class="sync-row">
-      <button class="sync-btn-sm primary" onclick="syncPush()">⬆ Subir</button>
-      <button class="sync-btn-sm primary" onclick="syncPull()">⬇ Bajar</button>
-    </div>
     <div class="sync-row">
       <button class="sync-btn-sm" onclick="closeSyncModal()">Cerrar</button>
       <button class="sync-btn-sm danger" onclick="syncDisconnect()">Desconectar</button>
     </div>
     <hr class="sync-divider">
     <div class="sync-help">
-      • La primera vez que subas, se crea automáticamente un Gist privado llamado <strong style="color:#fff">nadie-corre-solo-backup.json</strong>.<br>
-      • Al bajar, los datos del Gist reemplazan los locales (se usa la versión más reciente por campo).<br>
-      • El token se guarda solo en este dispositivo, nunca se envía a ningún servidor propio.
+      • La subida es automática: unos segundos después de cada cambio y al cerrar la app.<br>
+      • Al abrir la app se baja lo que haya en la nube. Si dos dispositivos tocaron cosas distintas, se conservan ambas.<br>
+      • Ya no hace falta ningún token de GitHub.
     </div>
   </div>
 </div>

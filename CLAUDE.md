@@ -49,7 +49,7 @@ Testing local: `cd repo-root && python3 -m http.server 8080` (necesitas servidor
 - Swap de workouts con long-press
 - Analytics: gráficos km planificados vs reales, tiempo semanal
 - Fuerza: tarjetas individuales por ejercicio con descripción
-- Sync vía GitHub Gist (PAT + Gist ID manual para multi-dispositivo)
+- Copia de seguridad automática en la nube vía `api/sync.js` (Upstash Redis) — sin token de GitHub en el browser
 - Onboarding wizard (pasos 1-3): crea nueva carrera preguntando nombre, fecha, distancia, desnivel, ritmos, disponibilidad semanal con variaciones fin de semana
 - PWA manifest con íconos (192 y 512px, base64 inline en app.js o index.html)
 
@@ -130,7 +130,7 @@ const ATHLETES = [
 ### Storage (`core/storage.js`)
 - `S.get(key)` / `S.set(key, val)` — wrapper de localStorage
 - Namespace por atleta+carrera para evitar colisiones
-- Sync: PAT en `localStorage['tw_sync_pat']`, Gist ID en `localStorage['tw_sync_gist_id']`
+- Sync: código en `localStorage['tw_sync_code']` (32 hex, es la credencial), marcas por clave en `tw_sync_mtimes`
 
 ---
 
@@ -156,8 +156,13 @@ Wizard de 3 pasos disparado cuando no hay carreras o usuario elige "nueva carrer
 3. Disponibilidad semanal (días disponibles, variaciones fin de semana)
 
 ### Sync
-`openSyncModal()` → ingresa PAT (GitHub) + Gist ID opcional → `syncPush()` o `syncPull()`
-El Gist ID manual permite sincronizar entre dispositivos sin compartir PAT.
+`openSyncModal()` → `syncCreate()` en el primer dispositivo (genera código y sube) o
+`syncLink()` en los demás (pega el código; el remoto reemplaza lo local).
+Después es automático: `syncSchedulePush()` sube ~2,5 s tras cada `S.set`, `syncFlush()` al
+ocultar la app, y `syncPull(true)` baja al arrancar. Merge last-write-wins **por clave**.
+
+Ojo: `GARMIN_GIST_ID` en `core/app.js` es otro gist, de solo lectura, que alimenta el
+autocompletado de Garmin. No tiene relación con la copia de seguridad.
 
 ---
 
