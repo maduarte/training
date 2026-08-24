@@ -371,7 +371,7 @@ const F_MANT=[
 function buildBasalTrailWeeks(){return [
   {num:1,dates:"22–23 Ago",phase:"REACTIVACIÓN",totalKm:5,days:[
     W("b1d0","2026-08-22","Sáb 22 Ago","Vuelta a correr","SUAVE",5,"Primera corrida desde el 6 de agosto. 5km planos, muy suave, conversando sin esfuerzo. No mires el ritmo.\n\n⚠️ Vienes saliendo de influenza: si aparece fatiga desproporcionada, pulso alto en esfuerzo fácil o falta de aire, corta la sesión. Esta semana el objetivo es reactivar, no entrenar."),
-    F("b1d1","2026-08-23","Dom 23 Ago","Fuerza A – Cadera y movilidad",3,"La sesión que te saltaste en el plan de Torrencial y que terminó en la lesión. Aquí es innegociable: sin glúteo medio fuerte, la banda iliotibial paga la cuenta cuando suba el volumen.\n\nSin carga externa. Aprende el patrón: la pelvis no rota, la cadera no cae."),
+    F("b1d1","2026-08-23","Dom 23 Ago","Fuerza A – Cadera y movilidad",3,"La sesión que te saltaste en el plan de Torrencial y que terminó en la lesión. Aquí es innegociable: sin glúteo medio fuerte, la banda iliotibial paga la cuenta cuando suba el volumen.\n\nSin carga externa. Aprende el patrón: la pelvis no rota, la cadera no cae.",FA_BASE),
   ]},
   {num:2,dates:"24–30 Ago",phase:"REACTIVACIÓN",totalKm:22,days:[
     W("b2d0","2026-08-24","Lun 24 Ago","Descanso activo","DESCANSO",0,"Ayer hiciste fuerza: hoy no toca otra sesión de carga. Caminata suave 20min o movilidad. La adaptación de fuerza ocurre en el descanso, no en la repetición."),
