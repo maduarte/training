@@ -2,7 +2,24 @@
 // Vercel Serverless Function — proxy hacia Anthropic API
 // La API key vive aquí en el servidor, nunca llega al browser.
 
+// La app también se sirve desde GitHub Pages, que no tiene funciones: ese
+// origen llama aquí de forma cruzada y necesita CORS.
+const ALLOWED_ORIGINS = ['https://maduarte.github.io'];
+
+function cors(req, res) {
+  const origin = req.headers?.origin;
+  if (!origin || !ALLOWED_ORIGINS.includes(origin)) return;
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
+
 export default async function handler(req, res) {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).end();
+
   // Solo POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
