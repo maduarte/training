@@ -12,20 +12,6 @@
 //   GET  /api/sync?code=<32hex>  → { data, updatedAt } | { data: null }
 //   POST /api/sync?code=<32hex>  → guarda el body JSON
 
-// La app se sirve desde dos orígenes (GitHub Pages y Vercel) pero las funciones
-// solo existen en Vercel, así que el de Pages necesita CORS.
-const ALLOWED_ORIGINS = ['https://maduarte.github.io'];
-
-function cors(req, res) {
-  const origin = req.headers?.origin;
-  if (!origin || !ALLOWED_ORIGINS.includes(origin)) return;
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Max-Age', '86400');
-}
-
 const CODE_RE = /^[a-f0-9]{32}$/;
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB — muy por encima de un plan completo
 const TTL_SECONDS = 60 * 60 * 24 * 730; // 2 años sin usar → expira
@@ -47,9 +33,6 @@ async function redis(db, path, init = {}) {
 }
 
 export default async function handler(req, res) {
-  cors(req, res);
-  if (req.method === 'OPTIONS') return res.status(204).end();
-
   const db = upstash();
   if (!db) {
     return res.status(500).json({ error: 'Almacenamiento no configurado en el servidor.' });

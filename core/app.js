@@ -4,13 +4,6 @@ const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace pro
 // Gist de solo-lectura que alimenta garmin-sync/sync_garmin.py (corre 1x/día en el Mac vía launchd).
 // No requiere PAT: los gists secretos de GitHub son legibles con el ID sin autenticación.
 const GARMIN_GIST_ID = 'dcc4060fab614d7348188f25dd68d1de';
-
-// La app está desplegada en dos orígenes: Vercel (con funciones serverless) y
-// GitHub Pages (estático, donde cualquier POST a /api/* devuelve 405). Desde
-// Pages hay que llamar a Vercel de forma cruzada — el CORS está en api/.
-const API_BASE = location.hostname === 'maduarte.github.io'
-  ? 'https://ncstraining.vercel.app'
-  : '';
 const GARMIN_FILENAME = 'garmin-activities.json';
 
 let st={
@@ -999,7 +992,7 @@ initTitle();
 // Sube solo tras cada cambio (con debounce) — el backup deja de depender de
 // que te acuerdes de pulsar un botón.
 
-const SYNC_ENDPOINT   = API_BASE + '/api/sync';
+const SYNC_ENDPOINT   = '/api/sync';
 const SYNC_CODE_RE    = /^[a-f0-9]{32}$/;
 const SYNC_DEBOUNCE_MS= 2500;
 // Claves que no marcan "hay cambios sin subir" (ruido de navegación).
@@ -1426,7 +1419,7 @@ async function wizardGenerate(){
   const prompt=`Genera un plan de entrenamiento de trail running para esta carrera:\n- Nombre: ${raceName}\n- Distancia: ${distance}km, Desnivel: ${elevation}m D+\n- Fecha carrera: ${raceDate}\n- Inicio plan: ${startDate} (${weeksUntilRace} semanas)\n- Nivel actual: cómodo a ${easyKm}km, máximo ${maxKm}km\n- Ritmo suave: ${Math.floor(easyPaceSec/60)}:${String(easyPaceSec%60).padStart(2,'0')}/km\n- Ritmo intenso: ${Math.floor(fastPaceSec/60)}:${String(fastPaceSec%60).padStart(2,'0')}/km\n\nEstructura semanal:\n- Días de entrenamiento: ${_daysStr}${_altNote}\n- Usar SOLO esos días para entrenamientos. Los demás días son DESCANSO.\n\nIMPORTANTE: Responde SOLO con JSON válido, sin markdown, sin texto adicional. Usa este schema exacto:\n[\n  {\n    \"num\": 1,\n    \"dates\": \"1–7 Mar\",\n    \"phase\": \"BASE\",\n    \"totalKm\": 25,\n    \"days\": [\n      {\"id\":\"w1d0\",\"date\":\"2026-03-02\",\"label\":\"Lun 2 Mar\",\"session\":\"Rodaje suave\",\"type\":\"SUAVE\",\"km\":8,\"desc\":\"Descripción.\"},\n      {\"id\":\"w1d1\",\"date\":\"2026-03-03\",\"label\":\"Mar 3 Mar\",\"session\":\"Fuerza – Tren inferior\",\"type\":\"FUERZA\",\"km\":0,\"sets\":3,\"desc\":\"Descripción.\",\"exercises\":[{\"name\":\"Sentadilla\",\"reps\":\"12\"},{\"name\":\"Plancha\",\"reps\":\"30 seg\"}]},\n      {\"id\":\"w1d2\",\"date\":\"2026-03-04\",\"label\":\"Mié 4 Mar\",\"session\":\"Descanso\",\"type\":\"DESCANSO\",\"km\":0,\"desc\":\"Descanso activo.\"}\n    ]\n  }\n]\n\nFases: BASE (25%), DESARROLLO (30%), PICO (25%), TAPER (2 semanas), CARRERA (1 semana), RECUPERACIÓN (2 semanas).\n3-4 sesiones por semana (1-2 FUERZA, resto SUAVE/MEDIO/INTENSO/DESCANSO).\nFase CARRERA: el día de la carrera tiene type INTENSO, km=${distance}.\nIDs de días: patrón wNdM (N=semana, M=índice). Fechas en YYYY-MM-DD.`;
 
   try{
-    const resp=await fetch(API_BASE+'/api/generate-plan',{
+    const resp=await fetch('/api/generate-plan',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:8000,messages:[{role:'user',content:prompt}]})

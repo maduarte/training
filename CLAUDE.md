@@ -6,7 +6,9 @@ Archivo de contexto para traspaso a Claude Code. Lee esto completo antes de toca
 
 ## Qué es esta app
 
-PWA (Progressive Web App) para entrenamiento de trail running. El usuario principal es **Mauro** (cuenta GitHub `maduarte`, antes `maduarte44` — la cuenta fue renombrada), preparándose para el **Torrencial 44k** (junio 2026, ~19 semanas de plan). La app vive en **https://maduarte.github.io/training/** (GitHub Pages, rama `main`).
+PWA (Progressive Web App) para entrenamiento de trail running. El usuario principal es **Mauro** (cuenta GitHub `maduarte`, antes `maduarte44` — la cuenta fue renombrada), preparándose para el **Torrencial 44k** (junio 2026, ~19 semanas de plan). La app vive en **https://ncstraining.vercel.app/** (Vercel, deploy automático al pushear a `main`).
+Hubo un deploy paralelo en GitHub Pages que se retiró: era estático, así que `/api/*` devolvía 405
+y el `localStorage` quedaba en otro origen. Un solo origen, siempre.
 
 La app es **multi-atleta**: en la pantalla inicial el usuario elige su perfil y carrera antes de entrar al calendario.
 
@@ -17,7 +19,7 @@ La app es **multi-atleta**: en la pantalla inicial el usuario elige su perfil y 
 ```
 repo-root/
 ├── index.html          ← esqueleto HTML + <link> y <script> refs
-├── sw.js               ← Service Worker (PENDIENTE — ver sección SW)
+├── sw.js               ← Service Worker (offline + estrategias de caché)
 ├── ui/
 │   └── styles.css      ← todo el CSS
 ├── data/
@@ -53,35 +55,18 @@ Testing local: `cd repo-root && python3 -m http.server 8080` (necesitas servidor
 - Onboarding wizard (pasos 1-3): crea nueva carrera preguntando nombre, fecha, distancia, desnivel, ritmos, disponibilidad semanal con variaciones fin de semana
 - PWA manifest con íconos (192 y 512px, base64 inline en app.js o index.html)
 
-### 🔴 PENDIENTE — tarea inmediata: Service Worker offline
-La sesión anterior terminó trabajando en esto. Resumen:
+### Service Worker
+Hecho. `sw.js` está en la raíz, se registra desde `core/app.js` con `'./sw.js'` y cachea así:
+- `/api/*` y `api.github.com` → **Network Only** (sin red devuelven un 503 con mensaje legible)
+- `fonts.googleapis.com` → Network First; `fonts.gstatic.com` → Cache First
+- Todo lo demás (app shell + CDN) → Cache First con revalidación en background
 
-**Problema**: El SW actual está registrado como un Blob URL dentro de `app.js` (o `index.html`), lo que hace que no persista entre sesiones del navegador. Offline no funciona realmente.
-
-**Solución acordada**:
-1. Crear `sw.js` en la raíz del repo (archivo independiente, ya generado — ver más abajo)
-2. Cambiar el registro en `core/app.js` de:
-   ```javascript
-   navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw], {type:'text/javascript'}))).catch(()=>{});
-   ```
-   a:
-   ```javascript
-   navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => {});
-   ```
-   (usa `../` porque el registro está en `core/app.js`, no en la raíz)
-   
-   **Alternativa más simple**: mover el registro al `index.html` raíz y usar `'./sw.js'` sin scope especial.
-
-**El `sw.js` ya fue diseñado** con estas estrategias:
-- Archivos propios (`url.origin === self.location.origin`): **Stale While Revalidate** — sirve caché al instante + actualiza en background. Funciona para cualquier estructura de carpetas sin listar archivos hardcodeados.
-- `api.github.com` y `api.anthropic.com`: **Network First** — intenta red; si falla, sirve última caché.
-- CDNs externos: **Cache First**
-
-La versión del caché es `'ncs-v4'`. Incrementar `CACHE_VERSION` al hacer cambios mayores para forzar actualización en usuarios existentes.
+**Sube `CACHE_NAME` en `sw.js` cada vez que cambies un archivo local**, o los usuarios
+con la PWA instalada seguirán viendo la versión anterior.
 
 ### 🟡 Pendiente futuro
 - `PACES_AUTO_UPDATE = false` en `core/app.js` — feature flag desactivado, retomar cuando se trabaje ritmos
-- Migración a servidor (back-end) para multi-usuario real (hoy usa localStorage + Gist sync)
+- Multi-usuario real: hoy `api/sync.js` guarda un blob por código de sync, sin cuentas ni permisos
 - `core/paces.js` separado cuando se retome lógica de ritmos
 
 ---
