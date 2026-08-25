@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v16';
+const APP_VERSION = 'v17';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -63,7 +63,7 @@ function openSettings(){
       <button class="settings-row-action" onclick="closeSettings();openSyncModal()">Sync →</button>
     </div>
     <div class="settings-row">
-      <div><div class="settings-row-label">Actividades de Garmin</div><div class="settings-row-sub">${garminGistId()?'Conectado · '+garminGistId().slice(0,8)+'…':'Sin conectar'}</div></div>
+      <div><div class="settings-row-label">Actividades de Garmin</div><div class="settings-row-sub">${garminStatusHtml()}</div></div>
       <button class="settings-row-action" onclick="closeSettings();openGarminSetup()">${garminGistId()?'Cambiar →':'Conectar →'}</button>
     </div>
     <div class="settings-section-label" style="margin-top:16px">EXCEL</div>
@@ -409,18 +409,27 @@ function calcPace(){
 // ══════════════════════════════════════════════════
 // GARMIN CACHE (solo lectura — ver garmin-sync/)
 // ══════════════════════════════════════════════════
-let GARMIN_BY_DATE = null; // {date: [activity,...]}
+let GARMIN_BY_DATE = null;      // {date: [activity,...]}
+let GARMIN_LAST_SYNCED = null;  // ISO del último run de sync_garmin.py, leído del propio gist
+let GARMIN_FETCH_FAILED = false;// el gist no respondió: sin red, ID malo o gist borrado
+
+// El sync corre 1x/día en el Mac del usuario y puede morirse en silencio (token
+// vencido, launchd descargado). Pasado este umbral Ajustes lo avisa en vez de
+// seguir diciendo "Conectado" mientras sirve caché viejo.
+const GARMIN_STALE_DAYS = 3;
 
 async function loadGarminCache(){
   const gid = garminGistId();
   if(!gid) return;
   try{
     const res = await fetch(`https://api.github.com/gists/${gid}`);
-    if(!res.ok) return;
+    if(!res.ok){ GARMIN_FETCH_FAILED = true; return; }
     const gist = await res.json();
     const raw = gist.files?.[GARMIN_FILENAME]?.content;
-    if(!raw) return;
+    if(!raw){ GARMIN_FETCH_FAILED = true; return; }
     const data = JSON.parse(raw);
+    GARMIN_FETCH_FAILED = false;
+    GARMIN_LAST_SYNCED = data.lastSynced || null;
     const byDate = {};
     (data.activities||[]).forEach(a=>{
       if(!a.date) return;
@@ -429,9 +438,34 @@ async function loadGarminCache(){
     GARMIN_BY_DATE = byDate;
     if(st.modalDay) renderGarminSection(st.modalDay); // modal ya abierto esperando datos
     autoFillGarminLogs();
-  }catch(e){ console.warn('[Garmin] caché no disponible', e); }
+  }catch(e){ GARMIN_FETCH_FAILED = true; console.warn('[Garmin] caché no disponible', e); }
 }
 loadGarminCache();
+
+// Estado legible para la fila de Ajustes. Devuelve HTML porque el caso vencido
+// va coloreado — que se note sin tener que leerlo.
+function garminStatusHtml(){
+  const gid = garminGistId();
+  if(!gid) return 'Sin conectar';
+  const short = escHtml(gid.slice(0,8)) + '…';
+  if(GARMIN_FETCH_FAILED) return `<span class="settings-row-warn">⚠ No se pudo leer el gist</span> · ${short}`;
+  if(!GARMIN_BY_DATE) return `${short} · leyendo…`;
+  if(!GARMIN_LAST_SYNCED) return `Conectado · ${short}`;
+
+  const ms = Date.now() - new Date(GARMIN_LAST_SYNCED).getTime();
+  if(!isFinite(ms)) return `Conectado · ${short}`;
+  const days = Math.floor(ms / 86400000);
+  let ago;
+  if(days >= 2)      ago = `hace ${days} días`;
+  else if(days === 1)ago = 'ayer';
+  else {
+    const hrs = Math.floor(ms / 3600000);
+    ago = hrs >= 1 ? `hace ${hrs} h` : 'recién';
+  }
+  return days >= GARMIN_STALE_DAYS
+    ? `<span class="settings-row-warn">⚠ Sin sincronizar ${ago}</span>`
+    : `Sincronizado ${ago}`;
+}
 
 // Cada usuario pega el ID de su propio gist. Acepta el ID pelado o la URL completa.
 function openGarminSetup(){
@@ -439,8 +473,8 @@ function openGarminSetup(){
   if(v===null) return;
   const id = v.trim().replace(/^.*\/([0-9a-f]{8,})\/?$/i,'$1');
   S.set('tw_garmin_gist', id);
-  if(id){ loadGarminCache(); }
-  else { GARMIN_BY_DATE=null; if(st.raceId) renderCal(); }
+  if(id){ GARMIN_FETCH_FAILED=false; GARMIN_LAST_SYNCED=null; GARMIN_BY_DATE=null; loadGarminCache(); }
+  else { GARMIN_BY_DATE=null; GARMIN_LAST_SYNCED=null; GARMIN_FETCH_FAILED=false; if(st.raceId) renderCal(); }
 }
 
 function garminActivityFor(day){
