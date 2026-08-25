@@ -6,7 +6,7 @@ Archivo de contexto para traspaso a Claude Code. Lee esto completo antes de toca
 
 ## Qué es esta app
 
-PWA (Progressive Web App) para entrenamiento de trail running. El usuario principal es **Mauro** (cuenta GitHub `maduarte`, antes `maduarte44` — la cuenta fue renombrada), preparándose para el **Torrencial 44k** (junio 2026, ~19 semanas de plan). La app vive en **https://ncstraining.vercel.app/** (Vercel, deploy automático al pushear a `main`).
+PWA (Progressive Web App) para entrenamiento de trail running. El usuario principal es **Mauro** (cuenta GitHub `maduarte`, id 31446732, creada en 2017 — es la dueña de este repo), preparándose para el **Torrencial 44k** (junio 2026, ~19 semanas de plan). La app vive en **https://ncstraining.vercel.app/** (Vercel, deploy automático al pushear a `main`).
 Hubo un deploy paralelo en GitHub Pages que se retiró: era estático, así que `/api/*` devolvía 405
 y el `localStorage` quedaba en otro origen. Un solo origen, siempre.
 
@@ -193,6 +193,18 @@ Ojo: el gist de Garmin es otro, de solo lectura, y alimenta el autocompletado de
 entrenamientos. No tiene relación con la copia de seguridad. Su ID vive en
 `tw_garmin_gist` (Ajustes → Actividades de Garmin), **por usuario**: estuvo fijo en el
 código y eso hacía que cualquier visitante viera las actividades del dueño del repo.
+
+**Nunca escribas un ID de gist en el repo.** Este repo es público y un gist "secreto"
+lo lee cualquiera que sepa el ID — ahí van rutas GPS con la casa de alguien adentro.
+Los IDs viven solo en `localStorage` (`tw_garmin_gist`) y en
+`~/.config/ncs-garmin-sync/config.json`, fuera de git.
+
+**Deuda: hay una segunda cuenta de GitHub, `maduarte44`** (id 262851851, creada
+feb-2026), separada de `maduarte` — no es un rename, las dos existen. Quedó por
+accidente. El gist de Garmin nació bajo ella y su token murió en ago-2026, lo que
+dejó el sync caído 22 días **en silencio**: la app seguía mostrando "Conectado" y
+sirviendo caché viejo. El gist se migró a `maduarte` en ago-2026. Si algo más
+aparece a nombre de `maduarte44`, migrarlo también.
 
 ---
 
