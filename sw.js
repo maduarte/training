@@ -3,7 +3,7 @@
 // Bump CACHE_NAME cuando cambies cualquier archivo local
 // ══════════════════════════════════════════════════
 
-const CACHE_NAME = 'ncs-trail-v12';
+const CACHE_NAME = 'ncs-trail-v13';
 const FONT_CACHE = 'ncs-fonts-v1';  // caché separada y long-lived para fuentes
 
 // ── Archivos pre-cacheados en la instalación ───────

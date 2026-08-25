@@ -73,6 +73,29 @@ con la PWA instalada seguirán viendo la versión anterior.
 
 ---
 
+## Aislamiento entre usuarios
+
+La app no tiene cuentas. El aislamiento sale de dos cosas:
+
+- **`localStorage` es por navegador**: cada persona que abre la URL tiene sus propios datos.
+- **El código de sync es la identidad**: una clave distinta en Redis por persona.
+
+Tres cosas rompían esto y hay que no reintroducirlas:
+
+1. **`migrateStorage()`** siembra carreras concretas (Torrencial, Putaendo, Basal). Solo debe
+   correr en instalaciones heredadas. `installKind()` decide **una vez** por navegador y graba
+   el resultado en `tw_install`: `legacy` si ya había claves `tw_*` al actualizar, `fresh` si
+   era un navegador virgen. Un usuario `fresh` nunca ejecuta migraciones, ni cuando después
+   tenga datos propios.
+2. **El gist de Garmin** estaba fijo en el código. Ahora es `tw_garmin_gist`, por usuario y
+   vacío por defecto; sin él, `loadGarminCache()` retorna sin pedir nada.
+3. **El perfil por defecto** era `{name:'Mauricio'}`. Ahora es `{name:'Atleta', avatar:'🏃'}`.
+
+Nada de esto protege contra alguien que consiga un código de sync ajeno: quien lo tiene, ve
+esos datos. Es el modelo aceptado para un grupo de conocidos, no para usuarios anónimos.
+
+---
+
 ## Modelo de datos clave
 
 ### ATHLETES (en `data/races.js`)
@@ -148,8 +171,10 @@ Wizard de 3 pasos disparado cuando no hay carreras o usuario elige "nueva carrer
 Después es automático: `syncSchedulePush()` sube ~2,5 s tras cada `S.set`, `syncFlush()` al
 ocultar la app, y `syncPull(true)` baja al arrancar. Merge last-write-wins **por clave**.
 
-Ojo: `GARMIN_GIST_ID` en `core/app.js` es otro gist, de solo lectura, que alimenta el
-autocompletado de Garmin. No tiene relación con la copia de seguridad.
+Ojo: el gist de Garmin es otro, de solo lectura, y alimenta el autocompletado de
+entrenamientos. No tiene relación con la copia de seguridad. Su ID vive en
+`tw_garmin_gist` (Ajustes → Actividades de Garmin), **por usuario**: estuvo fijo en el
+código y eso hacía que cualquier visitante viera las actividades del dueño del repo.
 
 ---
 

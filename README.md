@@ -304,4 +304,4 @@ No hay build step, no hay node_modules en el frontend, no hay bundler.
 - [Chart.js 4.4.0](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js) — gráficos
 - [Inter](https://fonts.google.com/specimen/Inter) + [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) — tipografía
 - Upstash Redis (REST) — copia de seguridad, vía `api/sync.js`
-- GitHub Gist API — solo lectura del Gist de Garmin
+- GitHub Gist API — solo lectura del Gist de Garmin (ID por usuario, en Ajustes)

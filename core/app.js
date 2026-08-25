@@ -1,9 +1,12 @@
 // ── Feature Flags ────────────────────────────────────────────
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
-// Gist de solo-lectura que alimenta garmin-sync/sync_garmin.py (corre 1x/día en el Mac vía launchd).
-// No requiere PAT: los gists secretos de GitHub son legibles con el ID sin autenticación.
-const GARMIN_GIST_ID = 'dcc4060fab614d7348188f25dd68d1de';
+// Gist de solo lectura con las actividades, alimentado por garmin-sync/sync_garmin.py
+// (corre 1x/día en el Mac de cada usuario vía launchd). No requiere PAT: los gists
+// secretos de GitHub son legibles con el ID sin autenticación — y por eso mismo el ID
+// es privado y se guarda por usuario, nunca fijo en el código.
+// Vacío = la app no consulta Garmin y la tarjeta no aparece.
+function garminGistId(){ return String(S.get('tw_garmin_gist')||'').trim(); }
 const GARMIN_FILENAME = 'garmin-activities.json';
 
 let st={
@@ -21,7 +24,7 @@ let st={
 function openSettings(){
   const body=document.getElementById('settings-body');
   const all=getAllRaces();
-  const profile=S.get('tw_profile')||{name:'Mauricio',avatar:'🏔'};
+  const profile=S.get('tw_profile')||{name:'Atleta',avatar:'🏃'};
   const raceRows=all.map(r=>{
     const daysLeft=Math.ceil((new Date(r.date)-new Date())/86400000);
     const isActive=r.id===st.raceId;
@@ -54,6 +57,10 @@ function openSettings(){
     <div class="settings-row">
       <div><div class="settings-row-label">Sincronización</div><div class="settings-row-sub">Copia de seguridad en la nube</div></div>
       <button class="settings-row-action" onclick="closeSettings();openSyncModal()">Sync →</button>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-row-label">Actividades de Garmin</div><div class="settings-row-sub">${garminGistId()?'Conectado · '+garminGistId().slice(0,8)+'…':'Sin conectar'}</div></div>
+      <button class="settings-row-action" onclick="closeSettings();openGarminSetup()">${garminGistId()?'Cambiar →':'Conectar →'}</button>
     </div>
     <div class="settings-section-label" style="margin-top:16px">EXCEL</div>
     <div class="settings-row">
@@ -304,7 +311,7 @@ function updatePacePill(){
 
 let _profAvatar='🏃';
 function openProfileModal(){
-  const profile=S.get('tw_profile')||{name:'Mauricio',avatar:'🏔'};
+  const profile=S.get('tw_profile')||{name:'Atleta',avatar:'🏃'};
   _profAvatar=profile.avatar||'🏃';
   document.getElementById('prof-name').value=profile.name||'';
   document.getElementById('prof-avatar-preview').textContent=_profAvatar;
@@ -398,8 +405,10 @@ function calcPace(){
 let GARMIN_BY_DATE = null; // {date: [activity,...]}
 
 async function loadGarminCache(){
+  const gid = garminGistId();
+  if(!gid) return;
   try{
-    const res = await fetch(`https://api.github.com/gists/${GARMIN_GIST_ID}`);
+    const res = await fetch(`https://api.github.com/gists/${gid}`);
     if(!res.ok) return;
     const gist = await res.json();
     const raw = gist.files?.[GARMIN_FILENAME]?.content;
@@ -416,6 +425,16 @@ async function loadGarminCache(){
   }catch(e){ console.warn('[Garmin] caché no disponible', e); }
 }
 loadGarminCache();
+
+// Cada usuario pega el ID de su propio gist. Acepta el ID pelado o la URL completa.
+function openGarminSetup(){
+  const v = prompt('ID del Gist con tus actividades de Garmin.\n\nLo genera garmin-sync/sync_garmin.py en tu computador. Déjalo vacío para desconectar.', garminGistId());
+  if(v===null) return;
+  const id = v.trim().replace(/^.*\/([0-9a-f]{8,})\/?$/i,'$1');
+  S.set('tw_garmin_gist', id);
+  if(id){ loadGarminCache(); }
+  else { GARMIN_BY_DATE=null; if(st.raceId) renderCal(); }
+}
 
 function garminActivityFor(day){
   const matches = GARMIN_BY_DATE?.[day.date];
@@ -1884,7 +1903,25 @@ function migrateStorage(){
     console.log('[Migration] Basal de Trail sembrada en tw_races');
   }
 }
-migrateStorage();
+// ¿Instalación heredada o navegador virgen?
+// Las migraciones de arriba son parches puntuales sobre los datos que ya existían
+// antes de que la app fuera multiusuario: siembran carreras concretas. En un
+// navegador nuevo no deben correr nunca — le meterían el plan de otra persona.
+// La decisión se toma una sola vez y queda grabada.
+function installKind(){
+  const saved=S.get('tw_install');
+  if(saved) return saved;
+  let hadData=false;
+  for(let n=0;n<localStorage.length;n++){
+    const k=localStorage.key(n);
+    if(k && k.startsWith('tw_') && k!=='tw_install' && !k.startsWith('tw_sync_')){ hadData=true; break; }
+  }
+  const kind=hadData?'legacy':'fresh';
+  S.set('tw_install',kind);
+  return kind;
+}
+
+if(installKind()==='legacy') migrateStorage();
 
 // Splash → app or onboarding
 setTimeout(()=>{
