@@ -99,32 +99,53 @@ esos datos. Es el modelo aceptado para un grupo de conocidos, no para usuarios a
 
 ## Modelo de datos clave
 
-### Carrera
+### Carrera (dentro de `tw_races`)
 ```javascript
 {
-  id: 'torrencial44',
-  name: 'Torrencial 44k',
-  date: '2026-06-27',
-  distanceKm: 44,
-  gainM: 2800,
-  weeks: buildWeeks(startDate, config)
+  id: 'race_1755900000000',   // 'import_<ts>' si vino de Excel
+  name: 'Mi carrera',
+  date: '2027-05-15',         // YYYY-MM-DD
+  distance: 30,               // km — NO 'distanceKm'
+  elevation: 900,             // m D+ — NO 'gainM'
+  defaultTitle: '⛰ Mi carrera',
+  status: 'upcoming',
+  weeks: [ /* ver abajo */ ]
 }
 ```
 
-### Workout (semana/día)
+### Semana
+```javascript
+{ num: 1, dates: '1 Feb – 7 Feb', phase: 'BASE', totalKm: 25, days: [ /* 7 días */ ] }
+```
+
+### Día
 ```javascript
 {
+  id: 'w1d3',                 // clave con la que se indexan logs y reacciones
+  date: '2027-02-04',
+  label: 'Jue 4 Feb',
+  session: 'Rodaje suave',    // título de la tarjeta
   type: 'SUAVE' | 'MEDIO' | 'INTENSO' | 'FUERZA' | 'DESCANSO',
-  km: 10,
-  note: 'Rodaje suave',
-  altNote: '',      // nota alternativa (para días con variación)
-  logged: {
-    h: 0, m: 55, s: 0,    // tiempo real
-    km: 10.2,              // distancia real
-    emoji: '💪'
+  km: 10,                     // 0 en FUERZA y DESCANSO
+  desc: 'Texto largo.',
+  sets: 3,                    // solo FUERZA
+  exercises: [{name: 'Sentadilla', reps: '12'}]   // solo FUERZA
+}
+```
+
+### Registro real — va aparte, en `tw_logs_<raceId>`, indexado por `day.id`
+```javascript
+{
+  'w1d3': {
+    th: 0, tm: 55, ts: 0,     // tiempo real (horas, minutos, segundos)
+    distance: 10.2,
+    time: '55:00',
+    pace: '5:23/km',
+    fromGarmin: true          // presente solo si lo autocompletó Garmin
   }
 }
 ```
+Las reacciones viven en `tw_rxn_<raceId>`, también indexadas por `day.id`.
 
 ### Storage (`core/storage.js`)
 - `S.get(key)` / `S.set(key, val)` — wrapper de localStorage
