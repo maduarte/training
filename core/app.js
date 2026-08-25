@@ -1,4 +1,8 @@
 // ── Feature Flags ────────────────────────────────────────────
+// Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
+// única forma de saber si el dispositivo está sirviendo una versión cacheada.
+const APP_VERSION = 'v15';
+
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
 // Gist de solo lectura con las actividades, alimentado por garmin-sync/sync_garmin.py
@@ -70,6 +74,9 @@ function openSettings(){
     <div class="settings-row">
       <div><div class="settings-row-label">Importar carrera</div><div class="settings-row-sub">Carga un plan desde archivo .xlsx</div></div>
       <button class="settings-row-action" onclick="importFromExcel()">Importar ↑</button>
+    </div>
+    <div style="text-align:center;margin-top:20px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#2a2a35;letter-spacing:1px">
+      NADIE CORRE SOLO · ${APP_VERSION}
     </div>
   `;
   document.getElementById('settings-panel').classList.remove('hidden');
@@ -992,6 +999,21 @@ function setupPWA(){
   }catch(e){}
   if('serviceWorker' in navigator){
     try{
+      // El SW sirve cache-first, así que la carga que instala una versión nueva
+      // sigue mostrando la vieja: el usuario tenía que abrir la app dos veces
+      // (y en iOS, matarla del todo). Cuando el SW nuevo toma el control,
+      // recargamos una vez.
+      //
+      // hadController distingue "se actualizó" de "es la primera visita": en la
+      // primera instalación controllerchange también dispara, y sin la guarda
+      // recargaríamos siempre. `recargando` corta cualquier bucle.
+      const hadController = !!navigator.serviceWorker.controller;
+      let recargando = false;
+      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+        if(!hadController || recargando) return;
+        recargando = true;
+        location.reload();
+      });
       navigator.serviceWorker.register('./sw.js').catch(()=>{});
     }catch(e){}
   }

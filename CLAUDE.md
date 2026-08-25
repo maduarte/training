@@ -63,8 +63,16 @@ Hecho. `sw.js` está en la raíz, se registra desde `core/app.js` con `'./sw.js'
 - `fonts.googleapis.com` → Network First; `fonts.gstatic.com` → Cache First
 - Todo lo demás (app shell + CDN) → Cache First con revalidación en background
 
-**Sube `CACHE_NAME` en `sw.js` cada vez que cambies un archivo local**, o los usuarios
-con la PWA instalada seguirán viendo la versión anterior.
+**Sube `CACHE_NAME` en `sw.js` Y `APP_VERSION` en `core/app.js` — las dos, al mismo valor —
+cada vez que cambies un archivo local.** Si no, los dispositivos con la PWA instalada siguen
+sirviendo la versión anterior. `APP_VERSION` se muestra al pie de Ajustes: es la única forma
+de saber desde fuera qué está corriendo un dispositivo.
+
+Como el SW sirve cache-first, la carga que descubre una versión nueva **todavía muestra la
+vieja**: el shell ya salió de caché antes de que el SW nuevo se instalara. Por eso `setupPWA()`
+escucha `controllerchange` y recarga una vez cuando el SW nuevo toma el control, con dos
+guardas: `hadController` (para no recargar en la primera visita, donde el evento también
+dispara) y `recargando` (para cortar bucles).
 
 ### 🟡 Pendiente futuro
 - `PACES_AUTO_UPDATE = false` en `core/app.js` — feature flag desactivado, retomar cuando se trabaje ritmos
