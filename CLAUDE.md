@@ -199,12 +199,25 @@ lo lee cualquiera que sepa el ID — ahí van rutas GPS con la casa de alguien a
 Los IDs viven solo en `localStorage` (`tw_garmin_gist`) y en
 `~/.config/ncs-garmin-sync/config.json`, fuera de git.
 
-**Deuda: hay una segunda cuenta de GitHub, `maduarte44`** (id 262851851, creada
-feb-2026), separada de `maduarte` — no es un rename, las dos existen. Quedó por
-accidente. El gist de Garmin nació bajo ella y su token murió en ago-2026, lo que
-dejó el sync caído 22 días **en silencio**: la app seguía mostrando "Conectado" y
-sirviendo caché viejo. El gist se migró a `maduarte` en ago-2026. Si algo más
-aparece a nombre de `maduarte44`, migrarlo también.
+**El sync de Garmin es de un solo usuario: Mauro.** Decisión tomada en ago-2026, no
+es un pendiente. Llenar el gist exige correr `sync_garmin.py` 1x/día en el Mac
+propio (Python, CLI `garmin-connect` autenticado, token de GitHub con scope `gist`,
+`launchd`), así que no es algo que otra persona pueda activar sola. Por eso:
+
+- La ruta fija `/Users/mauro/...` en `com.ncs.garminsync.plist` **no es un bug**.
+  No la "arregles" con `$HOME` ni escribas un instalador.
+- No hay que construir el puente por Strava (`spike/strava-cors-test.html` quedó
+  como experimento sin conclusión). Solo tendría sentido para habilitar a gente no
+  técnica, y eso está descartado.
+- El resto de la app **sí** es multi-atleta. Esto aplica únicamente a Garmin.
+
+Historia, por si algo aparece: el gist nació bajo una segunda cuenta de GitHub,
+`maduarte44`, creada por accidente en feb-2026 y separada de `maduarte` (no fue un
+rename, coexistieron). Su token murió el 3-ago-2026 y dejó el sync caído 22 días
+**en silencio** — la app seguía diciendo "Conectado" y sirviendo caché viejo; de ahí
+el aviso de antigüedad en Ajustes. El gist se migró a `maduarte` y la cuenta
+`maduarte44` se eliminó el 25-ago-2026, con su fork de este repo y un GitHub Pages
+que seguía sirviendo una copia vieja de la app.
 
 ---
 
