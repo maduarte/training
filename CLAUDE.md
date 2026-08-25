@@ -23,7 +23,7 @@ repo-root/
 ├── ui/
 │   └── styles.css      ← todo el CSS
 ├── data/
-│   ├── races.js        ← ATHLETES[], W(), F(), buildWeeks(), getAllRaces()
+│   ├── races.js        ← getAllRaces(), getActiveRaceId(), getRaceById()
 │   └── exercises.js    ← objeto EX con ejercicios de fuerza
 └── core/
     ├── storage.js      ← objeto S (localStorage wrapper), TYPE, PHASE_C, TODAY
@@ -82,11 +82,12 @@ La app no tiene cuentas. El aislamiento sale de dos cosas:
 
 Tres cosas rompían esto y hay que no reintroducirlas:
 
-1. **`migrateStorage()`** siembra carreras concretas (Torrencial, Putaendo, Basal). Solo debe
-   correr en instalaciones heredadas. `installKind()` decide **una vez** por navegador y graba
-   el resultado en `tw_install`: `legacy` si ya había claves `tw_*` al actualizar, `fresh` si
-   era un navegador virgen. Un usuario `fresh` nunca ejecuta migraciones, ni cuando después
-   tenga datos propios.
+1. **Planes escritos a mano en `data/races.js`** (Torrencial 44k, Putaendo 10k, Basal de Trail)
+   más un `migrateStorage()` que los sembraba en todos los navegadores: un usuario nuevo
+   entraba directo a un plan ajeno sin ver el onboarding. Ambos eliminados en ago-2026 — están
+   en el historial de git y respaldados en Excel fuera del repo. El archivo solo conserva los
+   helpers de lectura. **No vuelvas a poner el plan de nadie en el código**, ni siquiera
+   nombres de carrera en comentarios: `races.js` se descarga en el navegador de todos.
 2. **El gist de Garmin** estaba fijo en el código. Ahora es `tw_garmin_gist`, por usuario y
    vacío por defecto; sin él, `loadGarminCache()` retorna sin pedir nada.
 3. **El perfil por defecto** era `{name:'Mauricio'}`. Ahora es `{name:'Atleta', avatar:'🏃'}`.
@@ -97,18 +98,6 @@ esos datos. Es el modelo aceptado para un grupo de conocidos, no para usuarios a
 ---
 
 ## Modelo de datos clave
-
-### ATHLETES (en `data/races.js`)
-```javascript
-const ATHLETES = [
-  {
-    id: 'mauro',
-    name: 'Mauricio',
-    races: [ getRaceById('torrencial44') ]
-  },
-  // ...
-]
-```
 
 ### Carrera
 ```javascript
@@ -175,18 +164,6 @@ Ojo: el gist de Garmin es otro, de solo lectura, y alimenta el autocompletado de
 entrenamientos. No tiene relación con la copia de seguridad. Su ID vive en
 `tw_garmin_gist` (Ajustes → Actividades de Garmin), **por usuario**: estuvo fijo en el
 código y eso hacía que cualquier visitante viera las actividades del dueño del repo.
-
----
-
-## Guardia de dependencias (en `app.js`)
-
-Si `races.js` no carga, la app muestra error legible:
-```javascript
-if (typeof buildWeeks === 'undefined' || typeof ATHLETES === 'undefined') {
-  document.body.innerHTML = '<div style="color:#f4634a;padding:40px">Error: no se pudo cargar races.js.</div>';
-  throw new Error('races.js not loaded');
-}
-```
 
 ---
 
