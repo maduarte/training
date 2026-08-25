@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v16';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -75,7 +75,7 @@ function openSettings(){
       <div><div class="settings-row-label">Importar carrera</div><div class="settings-row-sub">Carga un plan desde archivo .xlsx</div></div>
       <button class="settings-row-action" onclick="importFromExcel()">Importar ↑</button>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#2a2a35;letter-spacing:1px">
+    <div style="text-align:center;margin-top:20px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--dim);letter-spacing:1px">
       NADIE CORRE SOLO · ${APP_VERSION}
     </div>
   `;
@@ -614,7 +614,7 @@ function openModal(i){
     `<span class="m-chip" style="background:${ts.ch};color:${ts.tx}">${day.type}</span>`+
     (day.type==='FUERZA'?`<span class="m-km" style="color:${ts.tx}">${day.sets||3} series</span>`:
       day.km>0?`<span class="m-km" style="color:${ts.tx}">${fmtNum(day.km)} km</span>`+
-        (st.pacesSet&&day.type!=='DESCANSO'?`<span class="m-km" style="color:#7070a0;font-size:12px">· ${fmtDur(estSeconds(day))}</span>`:''):'');
+        (st.pacesSet&&day.type!=='DESCANSO'?`<span class="m-km" style="color:var(--dim);font-size:12px">· ${fmtDur(estSeconds(day))}</span>`:''):'');
   document.getElementById('m-desc').textContent=day.desc;
   document.getElementById('m-garmin').innerHTML='';
   renderGarminSection(day);
@@ -951,7 +951,7 @@ function renderStats(){
   Object.values(st.reactions).forEach(r=>{if(r&&rc[r]!==undefined)rc[r]++;});
   const tot=Object.values(rc).reduce((s,c)=>s+c,0);
   document.getElementById('rxn-sum').innerHTML=tot===0?
-    '<div style="color:#2a2a35;font-size:12px">Registra entrenamientos para ver sensaciones.</div>':
+    '<div style="color:var(--dim);font-size:12px">Registra entrenamientos para ver sensaciones.</div>':
     ['😊','😐','😞'].map(em=>`<div class="rxn-st"><div class="rxn-em">${em}</div><div class="rxn-ct">${rc[em]}</div><div class="rxn-pct">${Math.round(rc[em]/tot*100)}%</div></div>`).join('');
 }
 
