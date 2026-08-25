@@ -15,6 +15,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 import urllib.error
 from datetime import datetime, timedelta, timezone
@@ -26,6 +27,11 @@ CONFIG_PATH = Path.home() / ".config" / "ncs-garmin-sync" / "config.json"
 GARMIN_CLI = shutil.which("garmin-connect") or str(Path.home() / ".local" / "bin" / "garmin-connect")
 LOOKBACK_BUFFER_DAYS = 3
 GITHUB_API = "https://api.github.com"
+# launchd dispara el job cuando el Mac despierta, a menudo antes de que la red
+# esté lista: el primer intento moría con un URLError de DNS y no se reintentaba
+# hasta el día siguiente. Espera creciente: 20+40+60+80+100 = 5 min como máximo.
+NET_RETRIES = 6
+NET_BACKOFF_SEC = 20
 ROUTE_TYPES = {"running", "trail_running"}
 ROUTE_BACKFILL_DAYS = 30  # solo trae ruta GPS (para el mapa) de actividades recientes
 ROUTE_MAX_POINTS = 150
@@ -53,11 +59,22 @@ def github_request(method, path, token, body=None):
         },
         data=json.dumps(body).encode() if body is not None else None,
     )
-    try:
-        with urllib.request.urlopen(req) as res:
-            return json.loads(res.read())
-    except urllib.error.HTTPError as e:
-        sys.exit(f"GitHub API error {e.code}: {e.read().decode()}")
+    ultimo = None
+    for intento in range(NET_RETRIES):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as res:
+                return json.loads(res.read())
+        except urllib.error.HTTPError as e:
+            # Error de la API (401, 404, 422…), no de red: reintentar no ayuda.
+            # HTTPError hereda de URLError, así que este except va primero.
+            sys.exit(f"GitHub API error {e.code}: {e.read().decode()}")
+        except urllib.error.URLError as e:
+            ultimo = e
+            if intento < NET_RETRIES - 1:
+                espera = NET_BACKOFF_SEC * (intento + 1)
+                print(f"Red no disponible ({e.reason}). Reintento en {espera}s…", flush=True)
+                time.sleep(espera)
+    sys.exit(f"Sin red tras {NET_RETRIES} intentos: {ultimo}")
 
 
 def fetch_gist(gist_id, token):
