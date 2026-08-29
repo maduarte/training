@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v17';
+const APP_VERSION = 'v18';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -1671,7 +1671,9 @@ function exportToExcel(){
       const rxn=st.reactions[day.id]||'';
       const exStr=day.exercises?day.exercises.map(ex=>`${ex.name} ${ex.reps}`).join('; '):'';
       let timeStr='';
-      if(log.h!==undefined)timeStr=`${String(log.h).padStart(2,'0')}:${String(log.m).padStart(2,'0')}:${String(log.s).padStart(2,'0')}`;
+      // saveLog() y el autofill de Garmin guardan th/tm/ts. Exportamos siempre
+      // hh:mm:ss para que el import no tenga que adivinar el formato.
+      if(log.th!==undefined)timeStr=`${String(log.th).padStart(2,'0')}:${String(log.tm||0).padStart(2,'0')}:${String(log.ts||0).padStart(2,'0')}`;
       else if(log.time)timeStr=log.time;
       rows.push([
         w.num??'Carrera', w.phase||'', w.totalKm||0,
@@ -1773,11 +1775,15 @@ function importFromExcel(){
           const tReal=String(row[ix['Tiempo_Real']]||'').trim();
           const rxn=String(row[ix['Reacción']]||'').trim();
           if(kmReal||tReal){
-            const pts=tReal.split(':');
-            logsOut[dayId]={
-              distance:numIn(kmReal)||0, time:tReal,
-              h:Number(pts[0])||0, m:Number(pts[1])||0, s:Number(pts[2])||0
-            };
+            // Acepta "hh:mm:ss" y "mm:ss": saveLog() omite las horas cuando la
+            // sesión baja de 60min, y un Excel escrito a mano puede traer cualquiera.
+            const pts=tReal.split(':').map(n=>Number(n)||0);
+            const [th,tm,ts]=pts.length>=3?pts:[0,pts[0]||0,pts[1]||0];
+            const dist=numIn(kmReal)||0;
+            const secs=th*3600+tm*60+ts;
+            let pace='';
+            if(dist>0&&secs>0){const spk=secs/dist;pace=`${Math.floor(spk/60)}:${String(Math.round(spk%60)).padStart(2,'0')}/km`;}
+            logsOut[dayId]={th,tm,ts,distance:dist||null,time:tReal,pace};
           }
           if(rxn&&rxn!=='undefined')rxnOut[dayId]=rxn;
         });
