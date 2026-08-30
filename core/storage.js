@@ -40,5 +40,5 @@ const TYPE={
   FUERZA:  {bg:'#080e22',bd:'#7b9cf588',tx:'#7b9cf5',ch:'#0e1535'},
   DESCANSO:{bg:'#0e0e12',bd:'#252530',  tx:'#7d7d92',ch:'#141420'},  // el tipo más apagado, pero legible (4.8:1)
 };
-const PHASE_C={'BASE':'#52c9a0','DESARROLLO':'#f5b731','PEAK':'#f4634a','PEAK 🔺':'#f4634a','RECUPERACIÓN':'#a98be8','RECUPERACIÓN POST':'#a98be8','TAPER':'#7b9cf5','TAPER FINAL':'#7b9cf5','CARRERA':'#f5b731','REACTIVACIÓN':'#52c9a0','FUERZA EN CUESTA':'#f5b731','SUBIDA SOSTENIDA':'#f4634a','DESCARGA':'#a98be8','CIERRE Y TEST':'#7b9cf5','PROGRESIÓN':'#f5b731','CONSOLIDACIÓN':'#f5b731','TAPER + CARRERA':'#7b9cf5','CIERRE RECUPERACIÓN':'#a98be8'};
+const PHASE_C={'BASE':'#52c9a0','DESARROLLO':'#f5b731','PEAK':'#f4634a','PEAK 🔺':'#f4634a','RECUPERACIÓN':'#a98be8','RECUPERACIÓN POST':'#a98be8','TAPER':'#7b9cf5','TAPER FINAL':'#7b9cf5','CARRERA':'#f5b731','REACTIVACIÓN':'#52c9a0','FUERZA EN CUESTA':'#f5b731','SUBIDA SOSTENIDA':'#f4634a','DESCARGA':'#a98be8','DESCARGA REAL':'#a98be8','CIERRE Y TEST':'#7b9cf5','PROGRESIÓN':'#f5b731','CONSOLIDACIÓN':'#f5b731','TAPER + CARRERA':'#7b9cf5','CIERRE RECUPERACIÓN':'#a98be8'};
 const TODAY=new Date().toLocaleDateString('en-CA',{timeZone:'America/Santiago'});

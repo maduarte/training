@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v19';
+const APP_VERSION = 'v20';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
