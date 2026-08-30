@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v18';
+const APP_VERSION = 'v19';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -93,7 +93,7 @@ function deleteRace(rid){
 
   // Wipe all associated data
   ['weeks','logs','rxn','overrides','paces','title'].forEach(k=>{
-    try{ localStorage.removeItem(`tw_${k}_${rid}`); }catch(e){}
+    S.del(`tw_${k}_${rid}`);
   });
 
   // If deleted the active race, switch to another one
@@ -1304,6 +1304,17 @@ document.addEventListener('click', e=>{
 const _origSset = S.set.bind(S);
 S.set = function(k,v){
   _origSset(k,v);
+  if(typeof k!=='string' || k.startsWith('tw_sync_')) return;
+  syncTouch(k);
+  if(syncGetCode() && !SYNC_SKIP_KEYS.test(k)){ updateSyncBadge(true); syncSchedulePush(); }
+};
+
+// Borrar es un cambio como cualquier otro: si no le ponemos hora, la copia
+// remota de esa clave sigue siendo "más nueva" y el próximo syncPull la baja
+// de vuelta. Marcar el borrado hace que gane sobre lo que haya en la nube.
+const _origSdel = S.del.bind(S);
+S.del = function(k){
+  _origSdel(k);
   if(typeof k!=='string' || k.startsWith('tw_sync_')) return;
   syncTouch(k);
   if(syncGetCode() && !SYNC_SKIP_KEYS.test(k)){ updateSyncBadge(true); syncSchedulePush(); }

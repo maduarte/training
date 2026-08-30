@@ -1,6 +1,9 @@
 const S={
   get:(k)=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
-  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
+  // Borra siempre por acá, nunca con localStorage.removeItem: app.js envuelve
+  // del() igual que set() para que el sync se entere del borrado.
+  del:(k)=>{try{localStorage.removeItem(k)}catch(e){}}
 };
 // ── Números con coma decimal (es-CL) ───────────────────────────
 // Los teclados de iOS en español ofrecen coma, no punto: los campos aceptan

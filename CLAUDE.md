@@ -156,9 +156,14 @@ esos datos. Es el modelo aceptado para un grupo de conocidos, no para usuarios a
 Las reacciones viven en `tw_rxn_<raceId>`, también indexadas por `day.id`.
 
 ### Storage (`core/storage.js`)
-- `S.get(key)` / `S.set(key, val)` — wrapper de localStorage
-- Namespace por atleta+carrera para evitar colisiones
+- `S.get(key)` / `S.set(key, val)` / `S.del(key)` — wrapper de localStorage
+- No hay namespacing real: `S` escribe la clave tal cual. El aislamiento por carrera
+  sale del sufijo en el nombre (`tw_logs_<raceId>`), no del wrapper.
 - Sync: código en `localStorage['tw_sync_code']` (32 hex, es la credencial), marcas por clave en `tw_sync_mtimes`
+- **Nunca uses `localStorage.removeItem` sobre una clave `tw_` sincronizada.** `app.js`
+  envuelve `S.set` y `S.del` para marcar la hora del cambio; un borrado sin marca deja
+  la copia remota como "más nueva" y el siguiente `syncPull` la baja de vuelta. Las
+  claves `tw_sync_*` están fuera del sync y sí pueden borrarse directo.
 
 ---
 
