@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -975,7 +975,7 @@ function renderStats(){
     <div class="stat-card" style="border-color:#f4634a33"><div class="stat-val" style="color:#f4634a">${semAct}</div><div class="stat-lbl">semanas activas</div></div>`;
   if(st.chartKm){st.chartKm.destroy();st.chartKm=null;}
   if(st.chartT){st.chartT.destroy();st.chartT=null;}
-  const cOpts={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#4a4a5a',font:{size:10}}},tooltip:{callbacks:{label:(c)=>`${c.dataset.label}: ${fmtNum(c.parsed.y)}`}}},scales:{x:{ticks:{color:'#3a3a4a',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{color:'#141420'}},y:{ticks:{color:'#3a3a4a',font:{size:9}},grid:{color:'#141420'}}}};
+  const cOpts={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#b4b4cc',font:{size:10}}},tooltip:{callbacks:{label:(c)=>`${c.dataset.label}: ${fmtNum(c.parsed.y)}`}}},scales:{x:{ticks:{color:'#8888aa',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{color:'#141420'}},y:{ticks:{color:'#8888aa',font:{size:9}},grid:{color:'#141420'}}}};
   st.chartKm=new Chart(document.getElementById('chart-km').getContext('2d'),{type:'line',data:{labels:kmData.map(d=>d.lb),datasets:[
     {label:'Plan',data:kmData.map(d=>d.plan),borderColor:'#2a2a35',borderDash:[4,2],borderWidth:1.5,pointRadius:0,tension:.3},
     {label:'Real',data:kmData.map(d=>d.real),borderColor:'#52c9a0',backgroundColor:'#52c9a015',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#52c9a0',fill:true,tension:.3},
