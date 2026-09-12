@@ -35,6 +35,7 @@ NET_BACKOFF_SEC = 20
 ROUTE_TYPES = {"running", "trail_running"}
 ROUTE_BACKFILL_DAYS = 30  # solo trae ruta GPS (para el mapa) de actividades recientes
 ROUTE_MAX_POINTS = 150
+LAP_MIN_DISTANCE_M = 50  # un lap más corto que esto es ruido (pausa, arranque), no un tramo
 
 
 def load_config():
@@ -169,43 +170,176 @@ def estimate_gap_sec_per_km(samples, total_duration_sec, bucket_m=25):
     return round(total_duration_sec / (equiv_flat_m / 1000))
 
 
-def fetch_route_and_gap(activity_id, total_duration_sec):
-    """Un solo fetch pesado (>2MB, streams segundo a segundo) para sacar dos cosas:
+def weight_hr_samples(series):
+    """(bpm, t) -> (bpm, segundos que duró esa muestra). El stream no viene a
+    cadencia fija, así que cada muestra pesa lo que dura hasta la siguiente."""
+    out = []
+    for i, (bpm, t) in enumerate(series):
+        dt = (series[i + 1][1] - t) if i + 1 < len(series) else 0
+        if dt > 0:
+            out.append((bpm, dt))
+    return out
+
+
+def derive_hr_zone_bounds(samples, zones_sec):
+    """Límites de zona en bpm, deducidos de la propia actividad.
+
+    Garmin manda cuánto tiempo se estuvo en cada zona (hrTimeInZone_*) pero no
+    en qué pulsación empieza cada una. Ordenando las muestras por bpm y cortando
+    donde el tiempo acumulado alcanza el de cada zona se recuperan los límites
+    que reproducen ese mismo reparto, sin pedirle al usuario que los configure.
+    Así el color de cada punto del gráfico cuadra con el dónut de esa actividad."""
+    if not samples:
+        return None
+    z = [zones_sec.get(k) or 0 for k in ("z1", "z2", "z3", "z4", "z5")]
+    total_z = sum(z)
+    total_t = sum(w for _, w in samples)
+    if total_z <= 0 or total_t <= 0:
+        return None
+    ordered = sorted(samples)
+    bounds, target = [], 0.0
+    for i in range(4):
+        target += z[i]
+        cut = target / total_z * total_t  # stream y resumen no suman exactamente igual
+        acc, bound = 0.0, None
+        for bpm, w in ordered:
+            acc += w
+            if acc >= cut:
+                bound = bpm
+                break
+        bounds.append(bound if bound is not None else ordered[-1][0])
+    return bounds
+
+
+def hr_zone_index(bpm, bounds):
+    """Índice 0-4 (z1-z5) del pulso dado. None si falta el pulso o los límites."""
+    if not bpm or not bounds:
+        return None
+    for i, b in enumerate(bounds):
+        if bpm < b:
+            return i
+    return 4
+
+
+def km_splits(track):
+    """Parte el recorrido en tramos de 1 km, para las actividades que el reloj
+    grabó como una sola vuelta. track: (distancia_m, tiempo_s, bpm) en orden."""
+    splits, km = [], 1
+    prev_d = prev_t = 0.0
+    hrs = []
+    for dist, t, bpm in track:
+        if bpm:
+            hrs.append(bpm)
+        while dist >= km * 1000:
+            seg = round(t - prev_t)
+            # Un corte de GPS puede saltar de 900 a 2100 m: el km intermedio sale
+            # con duración 0 y su "ritmo" no significa nada. Se omite.
+            if seg > 0:
+                splits.append({
+                    "n": km,
+                    "km": 1.0,
+                    "s": seg,
+                    "hr": round(sum(hrs) / len(hrs)) if hrs else None,
+                })
+            prev_d, prev_t = km * 1000.0, t
+            hrs, km = [], km + 1
+    # El resto parcial solo entra si es lo bastante largo para que su ritmo
+    # signifique algo; si no, un último tramo de 80 m dispara una barra absurda.
+    rem = track[-1][0] - prev_d
+    if rem >= 200:
+        splits.append({
+            "n": km,
+            "km": round(rem / 1000, 2),
+            "s": round(track[-1][1] - prev_t),
+            "hr": round(sum(hrs) / len(hrs)) if hrs else None,
+        })
+    return splits
+
+
+def fetch_laps(activity_id):
+    """Vueltas marcadas por el reloj. Devuelve [] si la actividad es una sola
+    vuelta (el caso de los rodajes): ahí el gráfico se arma por kilómetro."""
+    data = run_cli("activities", "splits", str(activity_id))
+    raw = data.get("lapDTOs") if isinstance(data, dict) else None
+    if not raw or len(raw) < 2:
+        return []
+    laps = []
+    for i, l in enumerate(raw):
+        dist, dur = l.get("distance") or 0, l.get("duration") or 0
+        if dist < LAP_MIN_DISTANCE_M or dur <= 0:
+            continue
+        laps.append({
+            "n": l.get("lapIndex") or (i + 1),
+            "km": round(dist / 1000, 2),
+            "s": round(dur),
+            "hr": round(l["averageHR"]) if l.get("averageHR") else None,
+        })
+    return laps if len(laps) >= 2 else []
+
+
+def finish_laps(laps, bounds):
+    """Completa cada tramo con ritmo (seg/km) y zona de pulso."""
+    for l in laps:
+        l["p"] = round(l["s"] / l["km"]) if l.get("km") and l.get("s") else None
+        l["z"] = hr_zone_index(l.get("hr"), bounds)
+    return laps
+
+
+def fetch_activity_details(activity_id, total_duration_sec):
+    """Un solo fetch pesado (>1MB, streams segundo a segundo) del que salen cuatro cosas:
     - ruta [lat,lon,elev] decimada a ROUTE_MAX_POINTS, para el mapa coloreado por desnivel.
     - ritmo ajustado por desnivel (GAP), calculado sobre el stream completo (sin decimar).
+    - tramos de 1 km con ritmo y pulso medio, el respaldo del gráfico cuando el reloj
+      no marcó vueltas.
+    - muestras de pulso pesadas por tiempo, para deducir los límites de zona.
     Solo se llama para actividades nuevas/recientes con GPS (ver ROUTE_BACKFILL_DAYS) y
     el resultado se cachea en el Gist para no repetir la llamada."""
     details = run_cli("activities", "get", str(activity_id), "--details")
     if not details:
-        return None, None
+        return None
     descriptors = details.get("metricDescriptors", [])
     idx = {d["key"]: d["metricsIndex"] for d in descriptors}
     lat_i, lon_i = idx.get("directLatitude"), idx.get("directLongitude")
     elev_i, dist_i = idx.get("directElevation"), idx.get("sumDistance")
+    hr_i, time_i = idx.get("directHeartRate"), idx.get("sumDuration")
     if lat_i is None or lon_i is None:
-        return None, None
+        return None
 
-    points = []    # [lat, lon, elev] para el mapa
-    samples = []   # (distancia_m, elev_m) para el cálculo de GAP
+    def at(vals, i):
+        return vals[i] if i is not None and i < len(vals) else None
+
+    points = []     # [lat, lon, elev] para el mapa
+    samples = []    # (distancia_m, elev_m) para el cálculo de GAP
+    track = []      # (distancia_m, tiempo_s, bpm) para los tramos de 1 km
+    hr_series = []  # (bpm, tiempo_s) para deducir los límites de zona
     for m in details.get("activityDetailMetrics", []):
         vals = m.get("metrics", [])
-        lat = vals[lat_i] if lat_i < len(vals) else None
-        lon = vals[lon_i] if lon_i < len(vals) else None
-        elev = vals[elev_i] if elev_i is not None and elev_i < len(vals) else None
-        dist = vals[dist_i] if dist_i is not None and dist_i < len(vals) else None
+        lat, lon = at(vals, lat_i), at(vals, lon_i)
+        elev, dist = at(vals, elev_i), at(vals, dist_i)
+        bpm, t = at(vals, hr_i), at(vals, time_i)
         if lat is not None and lon is not None:
             points.append([round(lat, 5), round(lon, 5), round(elev, 1) if elev is not None else None])
         if elev is not None and dist is not None:
             samples.append((dist, elev))
+        if dist is not None and t is not None:
+            track.append((dist, t, bpm))
+        if bpm and t is not None:
+            hr_series.append((bpm, t))
 
     if not points:
-        return None, None
+        return None
+    gap = estimate_gap_sec_per_km(samples, total_duration_sec) if samples else None
+    splits = km_splits(track) if track else []
     if len(points) > ROUTE_MAX_POINTS:
         step = len(points) / ROUTE_MAX_POINTS
         points = [points[int(i * step)] for i in range(ROUTE_MAX_POINTS)]
 
-    gap = estimate_gap_sec_per_km(samples, total_duration_sec) if samples else None
-    return points, gap
+    return {
+        "route": points,
+        "gap": gap,
+        "kmSplits": splits,
+        "hrSamples": weight_hr_samples(hr_series),
+    }
 
 
 def main():
@@ -243,23 +377,40 @@ def main():
             if "gapSecPerKm" in prev:
                 # ya se intentó calcular GAP antes (puede ser None si no se pudo, no se reintenta)
                 summary["gapSecPerKm"] = prev["gapSecPerKm"]
-            # si no, summary queda sin la key: dispara un refetch único abajo (caché de antes de GAP)
+            if "laps" in prev:
+                summary["laps"] = prev["laps"]
+                summary["lapsSource"] = prev.get("lapsSource")
+            # si falta alguna key, summary queda sin ella: dispara un refetch único abajo
+            # (caché escrita por una versión anterior, de antes de GAP o de los laps)
         by_id[aid] = summary
 
     route_cutoff = (datetime.now(timezone.utc) - timedelta(days=ROUTE_BACKFILL_DAYS)).date().isoformat()
     fetched_routes = 0
+    fetched_laps = 0
     for summary in by_id.values():
-        if summary.get("route") and "gapSecPerKm" in summary:
+        if summary.get("route") and "gapSecPerKm" in summary and "laps" in summary:
             continue
         if not summary.get("hasPolyline") or summary.get("type") not in ROUTE_TYPES:
             continue
         if (summary.get("date") or "") < route_cutoff:
             continue
-        route, gap = fetch_route_and_gap(summary["garminActivityId"], summary.get("durationSec"))
-        if route:
-            summary["route"] = route
-            summary["gapSecPerKm"] = gap
-            fetched_routes += 1
+        det = fetch_activity_details(summary["garminActivityId"], summary.get("durationSec"))
+        if not det:
+            continue
+        summary["route"] = det["route"]
+        summary["gapSecPerKm"] = det["gap"]
+        fetched_routes += 1
+
+        # Las vueltas del reloj mandan; si la actividad es una sola vuelta, el
+        # gráfico se arma con los tramos de 1 km sacados del mismo stream.
+        laps = fetch_laps(summary["garminActivityId"])
+        source = "laps" if laps else "km"
+        laps = laps or det["kmSplits"]
+        bounds = derive_hr_zone_bounds(det["hrSamples"], summary.get("hrZonesSec") or {})
+        summary["laps"] = finish_laps(laps, bounds)
+        summary["lapsSource"] = source if summary["laps"] else None
+        if summary["laps"]:
+            fetched_laps += 1
 
     payload = {
         "lastSynced": datetime.now(timezone.utc).isoformat(),
@@ -280,7 +431,8 @@ def main():
 
     print(
         f"Sincronizadas {len(activities)} actividades nuevas/actualizadas. "
-        f"Rutas GPS nuevas: {fetched_routes}. Total en caché: {len(payload['activities'])}."
+        f"Rutas GPS nuevas: {fetched_routes}. Con tramos para el gráfico: {fetched_laps}. "
+        f"Total en caché: {len(payload['activities'])}."
     )
 
 

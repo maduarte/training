@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v21';
+const APP_VERSION = 'v22';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -17,7 +17,7 @@ let st={
   athleteId:null,raceId:null,raceDate:null,weeks:[],
   weekIdx:0,tab:'cal',reactions:{},logs:{},selected:null,modalDay:null,
   overrides:{},
-  chartKm:null,chartT:null,
+  chartKm:null,chartT:null,chartLaps:null,
   paces:{easy:400,fast:300}, // sec/km defaults: 6:40 easy, 5:00 fast
   pacesSet:false,
 };
@@ -598,10 +598,82 @@ function renderGarminHrZones(z){
   </div>`;
 }
 
+// Gráfico combinado por tramo: barras de ritmo sobre la escala verde→amarillo→rojo
+// del mapa (verde = más rápido) y encima la línea de pulso, con cada punto pintado
+// del color de su zona para que se lea contra el dónut de al lado.
+// `laps` lo arma sync_garmin.py: vueltas del reloj si las hay, o tramos de 1 km.
+function renderGarminLaps(a){
+  if(!lapsUsables(a))return '';
+  const ttl=a.lapsSource==='laps'?'Ritmo por vuelta':'Ritmo por km';
+  return `<div class="g-laps">
+    <div class="g-laps-title">${ttl}</div>
+    <div class="g-laps-canvas"><canvas id="g-laps-chart"></canvas></div>
+  </div>`;
+}
+
+function lapsUsables(a){
+  const l=(a&&a.laps||[]).filter(x=>x&&x.p>0);
+  return l.length>=2?l:null;
+}
+
+function drawGarminLaps(a){
+  const laps=lapsUsables(a);
+  const cv=document.getElementById('g-laps-chart');
+  if(!laps||!cv||typeof Chart==='undefined')return;
+
+  const paces=laps.map(l=>l.p);
+  const minP=Math.min(...paces),maxP=Math.max(...paces),spanP=(maxP-minP)||1;
+  // t=0 es el tramo más rápido (verde) y t=1 el más lento (rojo).
+  const barColors=laps.map(l=>elevColor((l.p-minP)/spanP));
+  const hasHr=laps.some(l=>l.hr);
+  const ptColors=laps.map(l=>l.z!=null?HR_ZONE_COLORS[l.z]:'#8888aa');
+
+  const ds=[{
+    type:'bar',label:'Ritmo',data:paces,yAxisID:'y',order:2,
+    backgroundColor:barColors,borderWidth:0,borderRadius:3
+  }];
+  if(hasHr)ds.push({
+    type:'line',label:'Pulso',data:laps.map(l=>l.hr??null),yAxisID:'y1',order:1,
+    borderColor:'hsla(270,55%,70%,.5)',borderWidth:1.5,tension:.3,spanGaps:true,
+    pointRadius:3.5,pointBackgroundColor:ptColors,pointBorderColor:ptColors
+  });
+
+  // El ritmo no arranca en cero: entre 5:52 y 6:52 hay un minuto de diferencia
+  // que desde cero se vería como doce barras idénticas.
+  const pad=spanP*0.35;
+  st.chartLaps=new Chart(cv.getContext('2d'),{
+    data:{labels:laps.map(l=>l.n),datasets:ds},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{
+          title:(c)=>`${a.lapsSource==='laps'?'Vuelta':'Km'} ${c[0].label}`,
+          label:(c)=>c.dataset.yAxisID==='y1'
+            ?`${c.parsed.y} bpm${laps[c.dataIndex].z!=null?` · Z${laps[c.dataIndex].z+1}`:''}`
+            :`${fmtPace(c.parsed.y)} /km · ${fmtNum(laps[c.dataIndex].km,2)} km`
+        }}
+      },
+      scales:{
+        x:{ticks:{color:'#8888aa',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}},
+        y:{position:'left',min:Math.max(0,minP-pad),max:maxP+spanP*0.15,
+           ticks:{color:'#8888aa',font:{size:9},maxTicksLimit:5,callback:(v)=>fmtPace(v)},
+           grid:{color:'#141420'}},
+        y1:{position:'right',display:hasHr,
+            ticks:{color:'#8888aa',font:{size:9},maxTicksLimit:5},
+            grid:{display:false}}
+      }
+    }
+  });
+}
+
 function renderGarminSection(day){
   const el=document.getElementById('m-garmin');
   if(!el||st.modalDay?.id!==day.id)return;
   const a=garminActivityFor(day);
+  // Vaciar el contenedor se lleva el <canvas>, pero no el Chart que lo usaba.
+  if(st.chartLaps){st.chartLaps.destroy();st.chartLaps=null;}
   if(!a){el.innerHTML='';return;}
   el.innerHTML=`
     <div class="g-card">
@@ -624,7 +696,11 @@ function renderGarminSection(day){
         ${renderGarminHrZones(a.hrZonesSec)}
         ${renderGarminRoute(a.route)}
       </div>
+      ${renderGarminLaps(a)}
     </div>`;
+  // openModal() aún no mostró el overlay: sin esperar un frame el canvas mide
+  // 0x0 y el gráfico sale en blanco.
+  requestAnimationFrame(()=>drawGarminLaps(a));
 }
 
 function openModal(i){
@@ -712,6 +788,7 @@ function closeModal(e){
   if(e&&e.target!==document.getElementById('modal-overlay'))return;
   document.getElementById('modal-overlay').style.display='none';
   document.getElementById('modal-overlay').classList.remove('open');
+  if(st.chartLaps){st.chartLaps.destroy();st.chartLaps=null;}
   st.modalDay=null;
 }
 

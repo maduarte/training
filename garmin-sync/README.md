@@ -53,6 +53,28 @@ Los nombres de campo en `activity_summary()` ya están validados contra una
 respuesta real de `garmin-connect activities list` (incluye HR, cadencia,
 desnivel, zonas de HR y distancia/duración).
 
+### Tramos para el gráfico de ritmo (`laps`)
+
+Cada actividad con GPS reciente lleva además un arreglo `laps` que alimenta el
+gráfico de barras del detalle. Cada tramo es
+`{n, km, s, p, hr, z}` — número, distancia, duración, ritmo en seg/km, pulso
+medio y zona de pulso (0-4).
+
+`lapsSource` dice de dónde salieron:
+
+- `"laps"`: vueltas que marcó el reloj. Es lo que pasa en las sesiones de
+  intervalos, donde cada vuelta es un bloque de trabajo o recuperación.
+- `"km"`: la actividad quedó como una sola vuelta (el caso de los rodajes), así
+  que los tramos se cortan cada 1000 m sobre el stream de distancia. El último
+  trozo entra solo si mide 200 m o más; si no, su ritmo es ruido.
+
+La zona (`z`) no viene de Garmin: el resumen trae cuánto tiempo se estuvo en cada
+zona, pero no en qué pulsación empieza cada una. `derive_hr_zone_bounds()` ordena
+las muestras de pulso por valor y corta donde el tiempo acumulado alcanza el de
+cada zona, recuperando los límites que reproducen ese mismo reparto. Se calcula
+por actividad, así que los colores del gráfico siempre cuadran con el dónut de
+esa actividad.
+
 ## 5. Instalar el launchd agent (correr 1x/día automáticamente)
 
 **Importante:** `launchd` corre como daemon en background, sin sesión de
