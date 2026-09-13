@@ -111,6 +111,57 @@ esos datos. Es el modelo aceptado para un grupo de conocidos, no para usuarios a
 
 ---
 
+## Compromisos publicados — no son opcionales
+
+`privacidad.html` está en línea desde el 12-sep-2026, servida desde este repo. Declara
+dos cosas que el código **todavía no cumple**. Son exigibles:
+
+1. **Desconectar la cuenta deportiva desde Ajustes borra el token del servidor y revoca
+   el permiso.** Tiene que existir antes de que se conecte la primera persona que no
+   sea Mauro.
+2. **Al acompañante de IA NO se le envía la ruta GPS, ni el nombre, ni el código de
+   sync.** Solo el plan y los entrenamientos de esa semana. Es una restricción de
+   diseño, no una preferencia.
+
+Si cambias lo que la app hace con datos de usuarios, `privacidad.html` se actualiza en
+el mismo commit. Una política que promete lo que el código no hace es peor que no tenerla.
+
+La página todavía no está enlazada desde ninguna parte de la app: existe en su URL
+porque intervals.icu la exige, pero nadie la encontraría navegando. Falta el enlace
+en Ajustes.
+
+---
+
+## Trampas de la API de intervals.icu — léelas antes de portar nada
+
+Verificadas el 12-sep-2026 cruzando la respuesta de intervals.icu contra la de Garmin
+para la misma actividad. Las tres fallan en silencio.
+
+1. **`latlng` no viene en pares.** El stream trae `data` con las latitudes y `data2`
+   con las longitudes, en arreglos paralelos. Tratarlo como `[[lat,lng],…]` no lanza
+   error: dibuja cualquier cosa.
+
+2. **El stream `time` es tiempo transcurrido, no en movimiento.** Misma trail: distancia
+   idéntica (12.012,59 m) pero 4.677 s contra 4.577 s de Garmin. Esos 100 segundos son
+   pausas. Calcular ritmo con `time` infla todos los ritmos.
+
+3. **`icu_intervals` no son las vueltas del reloj**, es detección automática. En una
+   sesión de intervalos acertó 17 de 17; en un rodaje devolvió una «RECOVERY» de 2
+   segundos con distancia nula. Hay que descartar los degenerados y caer al reparto por
+   km — la lógica ya existe en `garmin-sync/sync_garmin.py`.
+
+**Y la que casi cuesta el proyecto:** intervals.icu **no entrega webhooks de actividad
+para lo que llega reenviado desde Strava**. Garmin tiene que entrar directo. El campo
+`icu_garmin_sync_activities` es solo una preferencia; el que no miente es
+`icu_garmin_last_upload`.
+
+Endpoints (el spec vive en `https://intervals.icu/api/v1/docs`, pedirlo con
+`Accept: application/json` o devuelve la SPA):
+`GET /api/v1/athlete/{id}/activities?oldest=` · `GET /api/v1/activity/{id}/intervals` ·
+`GET /api/v1/activity/{id}/streams{ext}`
+
+---
+
 ## Modelo de datos clave
 
 ### Carrera (dentro de `tw_races`)
@@ -223,8 +274,10 @@ lo lee cualquiera que sepa el ID — ahí van rutas GPS con la casa de alguien a
 Los IDs viven solo en `localStorage` (`tw_garmin_gist`) y en
 `~/.config/ncs-garmin-sync/config.json`, fuera de git.
 
-**El sync de Garmin es de un solo usuario: Mauro.** Decisión tomada en ago-2026, no
-es un pendiente. Llenar el gist exige correr `sync_garmin.py` 1x/día en el Mac
+**El sync de Garmin es de un solo usuario: Mauro** — así funciona hoy, pero
+**esa decisión se revirtió en sep-2026 y ahora sí es un pendiente**, con un plan de
+migración a intervals.icu (webhooks, OAuth por atleta, sin Mac de por medio). Mientras
+esa migración no ocurra, lo que sigue describe la realidad vigente y hay que respetarlo. Llenar el gist exige correr `sync_garmin.py` 1x/día en el Mac
 propio (Python, CLI `garmin-connect` autenticado, token de GitHub con scope `gist`,
 `launchd`), así que no es algo que otra persona pueda activar sola. Por eso:
 
@@ -251,6 +304,18 @@ que seguía sirviendo una copia vieja de la app.
 // core/app.js — top of file
 const PACES_AUTO_UPDATE = false;   // desactivado — retomar en iteración futura
 ```
+
+---
+
+## El repo ncs-app
+
+Existe `maduarte/ncs-app` (privado), creado el 12-sep-2026 como destino de la migración.
+**No es producción y está desactualizado a propósito:** es un snapshot de v22, mientras
+este repo va en v26. Vercel sigue desplegando desde `training`.
+
+No trabajes ahí ni lo sincronices commit a commit — dos repos activos a la vez fue
+exactamente lo que produjo la divergencia. Se sincroniza de una sola vez, el día que se
+repunte Vercel. Hasta entonces, **este repo es la única fuente de verdad**.
 
 ---
 
