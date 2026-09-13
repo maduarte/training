@@ -15,6 +15,8 @@ Gestiona un calendario de entrenamiento personalizado para preparar carreras de 
 - Registro de entrenamiento real (distancia + tiempo)
 - Reacciones con emoji (😊 / 😐 / 😞)
 - Editor de entrenamientos planificados (tipo, nombre, km, ejercicios)
+- Sesión de fuerza: ficha de técnica y video corto por ejercicio, pantalla que no
+  se apaga mientras entrenas, e impresión en blanco y negro de la rutina
 - Indicador de overrides (entrenamiento editado vs. planificado original)
 - Duración estimada de cada sesión basada en el perfil de ritmos
 
@@ -48,7 +50,7 @@ training/
 │   └── storage.js        # Helpers de storage, constantes TYPE y PHASE_C
 ├── data/
 │   ├── races.js          # Datos de carreras, buildWeeks(), helpers multi-carrera
-│   └── exercises.js      # Biblioteca de ejercicios con descripciones (~80) + búsqueda tolerante
+│   └── exercises.js      # Biblioteca de ejercicios: descripciones, videos y búsqueda tolerante
 ├── ui/
 │   └── styles.css        # Todos los estilos (~345 líneas)
 ├── api/
@@ -220,6 +222,46 @@ técnica».
 |---|---|---|---|
 
 Importar **siempre crea una carrera nueva** (`import_<timestamp>`), nunca pisa una existente.
+
+---
+
+## Biblioteca de ejercicios
+
+`data/exercises.js` tiene 80 ejercicios. Cada uno con:
+
+- **Descripción** de la técnica en `EX`.
+- **Video corto** en `EX_VIDEO`. La mayoría del canal [@priscilla_bc](https://www.youtube.com/@priscilla_bc/shorts);
+  lo que ese canal no cubre —glúteo medio, propiocepción, movilidad, técnica de carrera—
+  viene de fisioterapeutas y entrenadores de running. Todos los IDs se verificaron
+  contra la API de oEmbed de YouTube.
+
+La búsqueda (`exLookup`) ignora tildes y mayúsculas y acepta ~60 sinónimos, así que un
+plan escrito fuera de la app no necesita copiar las claves al pie de la letra. Si un
+ejercicio no calza con nada, la tarjeta lo marca «Sin ficha de técnica» y no promete
+una descripción que no existe.
+
+**Para agregar un ejercicio**: una entrada en `EX` y otra en `EX_VIDEO` con el mismo
+nombre exacto. Si el video no existe o es privado, la tarjeta deja de mostrar el ▶ sin
+romper nada. Verifica el ID antes de commitearlo:
+
+```bash
+curl -s "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=<ID>&format=json"
+```
+
+---
+
+## Sesión de fuerza
+
+Al abrir un día de FUERZA:
+
+- **Pantalla encendida**: la app pide un *screen wake lock* para que el teléfono no se
+  bloquee entre series. Se suelta al cerrar el modal y se vuelve a pedir al volver a la
+  app (el sistema lo revoca al pasar a segundo plano). El botón 🔆 lo apaga a mano; si
+  el navegador no soporta la API, queda deshabilitado en vez de mentir.
+- **Imprimir**: llena `#print-area` y llama a `window.print()`. La hoja sale en blanco y
+  negro con una casilla por serie para ir tachando, y un checkbox decide si incluye las
+  descripciones. No usa `window.open()` a propósito: en la PWA instalada se lo come el
+  bloqueador de popups.
 
 ---
 

@@ -273,11 +273,15 @@
   </div>
 </div>
 
+<!-- ZONA DE IMPRESIÓN: vacía en pantalla, es lo único visible al imprimir -->
+<div id="print-area"></div>
+
 <!-- EXERCISE OVERLAY -->
 <div id="ex-overlay" onclick="if(event.target===this)closeExOverlay()">
   <div id="ex-box">
     <div class="ex-box-name" id="ex-box-name"></div>
     <div class="ex-box-desc" id="ex-box-desc"></div>
+    <a class="ex-box-video" id="ex-box-video" target="_blank" rel="noopener noreferrer">▶ Ver la técnica en YouTube</a>
     <button class="ex-box-close" onclick="closeExOverlay()">CERRAR</button>
   </div>
 </div>

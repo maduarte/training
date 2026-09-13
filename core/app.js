@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v23';
+const APP_VERSION = 'v24';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -745,15 +745,23 @@ function openModal(i){
       <div class="m-sets-badge">🔁 ${day.sets||3} SERIES</div>
       <div class="ex-list" id="ex-list">
         ${day.exercises.map(ex=>{
-          const ficha=exLookup(ex.name);
+          const ficha=exLookup(ex.name), vid=getExVideo(ex.name);
           return `
           <div class="ex-card${ficha?'':' ex-card-nodesc'}" onclick="showExInfo('${ex.name.replace(/'/g,"\\'")}')">
             <div class="ex-card-left">
               <div class="ex-card-name">${escHtml(ex.name)}</div>
               <div class="ex-card-hint">${ficha?'Toca para ver descripción':'Sin ficha de técnica'}</div>
             </div>
-            <div class="ex-card-reps">${escHtml(ex.reps)}</div>
+            <div class="ex-card-right">
+              <div class="ex-card-reps">${escHtml(ex.reps)}</div>
+              ${vid?`<a class="ex-card-play" href="${vid}" target="_blank" rel="noopener noreferrer" title="Ver la técnica en YouTube" onclick="event.stopPropagation()">▶</a>`:''}
+            </div>
           </div>`;}).join('')}
+      </div>
+      <div class="m-tools">
+        <button class="m-tool" id="m-awake" onclick="toggleAwake()"></button>
+        <button class="m-tool" onclick="printRutina()">🖨 Imprimir</button>
+        <label class="m-tool-chk"><input type="checkbox" id="m-print-desc" checked> con descripciones</label>
       </div>
       <div class="m-rxn-row">
         <span class="m-rxn-lbl">SENSACIÓN</span>
@@ -761,6 +769,9 @@ function openModal(i){
         <button class="m-rxn-btn${rxn==='😐'?' active':rxn?' inactive':''}" data-e="😐" onclick="reactModal('😐')">😐</button>
         <button class="m-rxn-btn${rxn==='😞'?' active':rxn?' inactive':''}" data-e="😞" onclick="reactModal('😞')">😞</button>
       </div>`;
+    // El toque que abrió el modal todavía cuenta como gesto del usuario, que es
+    // lo que exige la API para conceder el bloqueo.
+    requestAwake();
   } else {
     // Time pre-fill
     let th='',tm='',ts2='';
@@ -801,6 +812,7 @@ function closeModal(e){
   document.getElementById('modal-overlay').classList.remove('open');
   if(st.chartLaps){st.chartLaps.destroy();st.chartLaps=null;}
   st.modalDay=null;
+  releaseAwake();
 }
 
 // ══════════════════════════════════════════════════
@@ -1013,6 +1025,106 @@ function saveLog(){
   setTimeout(()=>closeModal({target:document.getElementById('modal-overlay')}),900);
 }
 
+// ══════════════════════════════════════════════════
+// PANTALLA ENCENDIDA (WAKE LOCK)
+// ══════════════════════════════════════════════════
+// Durante una sesión de fuerza el teléfono queda quieto entre series y se
+// bloquea solo. La Screen Wake Lock API lo evita mientras el modal esté abierto.
+// Requiere HTTPS y un gesto del usuario; el sistema la revoca al ocultar la
+// página, así que hay que volver a pedirla cuando la app se ve de nuevo.
+let _wakeLock=null;
+let _wakeWanted=false;
+
+function awakeSoportado(){ return 'wakeLock' in navigator; }
+
+async function requestAwake(){
+  _wakeWanted=true;
+  await adquirirAwake();
+  pintarAwake();
+}
+
+async function adquirirAwake(){
+  if(!_wakeWanted||!awakeSoportado()||_wakeLock)return;
+  try{
+    _wakeLock=await navigator.wakeLock.request('screen');
+    // release también dispara cuando lo revoca el sistema (pantalla apagada a
+    // mano, app en segundo plano): soltamos la referencia para poder repedirlo.
+    _wakeLock.addEventListener('release',()=>{_wakeLock=null;pintarAwake();});
+  }catch(err){
+    // Batería baja o permiso denegado. No es un error que valga interrumpir.
+    _wakeLock=null;
+  }
+}
+
+function releaseAwake(){
+  _wakeWanted=false;
+  if(_wakeLock){_wakeLock.release().catch(()=>{});_wakeLock=null;}
+}
+
+function toggleAwake(){
+  if(_wakeWanted){releaseAwake();pintarAwake();}
+  else requestAwake();
+}
+
+function pintarAwake(){
+  const b=document.getElementById('m-awake');
+  if(!b)return;
+  if(!awakeSoportado()){
+    b.textContent='🔅 Sin soporte';
+    b.classList.remove('on');
+    b.disabled=true;
+    b.title='Este navegador no permite mantener la pantalla encendida';
+    return;
+  }
+  const on=_wakeWanted&&!!_wakeLock;
+  b.textContent=on?'🔆 Pantalla encendida':'🔅 Pantalla normal';
+  b.classList.toggle('on',on);
+  b.title=on?'La pantalla no se apagará durante la sesión. Toca para desactivar.'
+            :'Toca para que la pantalla no se apague durante la sesión.';
+}
+
+// Volver a la app tras un bloqueo o un cambio de pestaña no debería costar la
+// sesión: si el modal de fuerza sigue abierto, repedimos el bloqueo.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&_wakeWanted)adquirirAwake().then(pintarAwake);
+});
+
+// ══════════════════════════════════════════════════
+// IMPRIMIR RUTINA
+// ══════════════════════════════════════════════════
+// Llena #print-area y deja que @media print haga el resto: nada de window.open(),
+// que en la PWA instalada se come el bloqueador de popups. Blanco y negro puro
+// para que salga legible en cualquier impresora.
+function printRutina(){
+  const day=st.modalDay;
+  if(!day||!day.exercises?.length)return;
+  const conDesc=document.getElementById('m-print-desc')?.checked;
+  const sets=day.sets||3;
+  const casillas=Array.from({length:sets},()=>'<span class="pr-box"></span>').join('');
+  const filas=day.exercises.map((ex,i)=>{
+    const ficha=conDesc?exLookup(ex.name):null;
+    return `<tr>
+      <td class="pr-n">${i+1}</td>
+      <td>
+        <div class="pr-name">${escHtml(ex.name)}</div>
+        ${ficha?`<div class="pr-desc">${escHtml(ficha.desc)}</div>`:''}
+      </td>
+      <td class="pr-reps">${escHtml(ex.reps)}</td>
+      <td class="pr-sets">${casillas}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('print-area').innerHTML=`
+    <h1>${escHtml(day.session||'Sesión de fuerza')}</h1>
+    <p class="pr-sub">${escHtml(day.label||'')}${day.date?` · ${escHtml(day.date)}`:''} · ${sets} series</p>
+    ${day.desc?`<p class="pr-note">${escHtml(day.desc)}</p>`:''}
+    <table>
+      <thead><tr><th></th><th>Ejercicio</th><th>Reps</th><th>Series</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <p class="pr-foot">Nadie Corre Solo · ${APP_VERSION}</p>`;
+  window.print();
+}
+
 // Exercise overlay
 // exLookup() vive en data/exercises.js y tolera tildes, mayúsculas y nombres con
 // las repeticiones pegadas. Si aun así no hay ficha, la tarjeta ni siquiera
@@ -1023,6 +1135,9 @@ function showExInfo(name){
   document.getElementById('ex-box-name').textContent=ex?ex.name:name;
   document.getElementById('ex-box-desc').textContent=ex?ex.desc
     :'Este ejercicio no está en la biblioteca, así que no tiene ficha con la técnica. Renómbralo como aparece en la biblioteca o pídeme que lo agregue.';
+  const vid=getExVideo(name), a=document.getElementById('ex-box-video');
+  a.href=vid||'#';
+  a.classList.toggle('hidden',!vid);
   document.getElementById('ex-overlay').classList.add('open');
 }
 function closeExOverlay(){

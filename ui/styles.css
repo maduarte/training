@@ -209,6 +209,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 /* Sin ficha en la biblioteca: la tarjeta no promete una descripción que no hay */
 .ex-card-nodesc .ex-card-hint{opacity:.45;font-style:italic}
 .ex-card-reps{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);background:#1a1a28;padding:4px 10px;border-radius:20px;flex-shrink:0}
+.ex-card-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+/* Área de toque de 34px: el ▶ abre YouTube, el resto de la tarjeta la ficha */
+.ex-card-play{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#1a1a28;border:1px solid #2a2a40;color:#f4634a;font-size:13px;text-decoration:none;line-height:1}
+.ex-card-play:active{background:#2a2a40}
+
+/* Herramientas de la sesión de fuerza */
+.m-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px}
+.m-tool{background:#0e0e18;border:1px solid #2a2a40;border-radius:20px;padding:7px 13px;color:#aaaacc;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer}
+.m-tool:disabled{opacity:.4;cursor:default}
+.m-tool.on{border-color:#f5b73188;color:#f5b731;background:#f5b7311a}
+.m-tool-chk{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);cursor:pointer}
+.m-tool-chk input{accent-color:#7b9cf5;width:14px;height:14px}
 
 /* EXERCISE OVERLAY */
 #ex-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:flex-end;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.65)}
@@ -216,7 +228,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 #ex-box{background:#12122a;border:1px solid #2a2a50;border-radius:16px;padding:22px;width:100%;max-width:480px;margin:0 auto;animation:slideUp .18s ease}
 .ex-box-name{font-size:21px;font-weight:900;color:var(--cf-tx);margin-bottom:10px}
 .ex-box-desc{font-size:14px;color:#aaaacc;line-height:1.65}
-.ex-box-close{display:block;width:100%;margin-top:16px;padding:11px;background:none;border:1px solid #2a2a40;border-radius:10px;color:#aaa;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer}
+.ex-box-video{display:block;width:100%;margin-top:16px;padding:11px;background:#f4634a14;border:1px solid #f4634a55;border-radius:10px;color:#f4634a;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;text-align:center;text-decoration:none;box-sizing:border-box}
+.ex-box-video.hidden{display:none}
+.ex-box-close{display:block;width:100%;margin-top:10px;padding:11px;background:none;border:1px solid #2a2a40;border-radius:10px;color:#aaa;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer}
 
 /* ANALYTICS */
 #tab-stats{padding:14px 14px 0}
@@ -368,3 +382,32 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .g-laps{margin-top:12px;border-top:1px solid #1c2a22;padding-top:10px}
 .g-laps-title{font-size:9px;font-weight:700;color:#8a8aa0;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
 .g-laps-canvas{position:relative;height:160px;width:100%}
+
+
+/* ══════════════════════════════════════════════════
+   IMPRESIÓN — rutina en blanco y negro
+   La app entera se oculta y solo queda #print-area, que en pantalla no existe.
+   Sin colores ni fondos: tinta negra sobre papel blanco.
+   ══════════════════════════════════════════════════ */
+#print-area{display:none}
+@media print{
+  body{background:#fff!important;color:#000!important;margin:0}
+  body>*{display:none!important}
+  #print-area{display:block!important;padding:0;font-family:Georgia,'Times New Roman',serif;color:#000}
+  #print-area h1{font-size:20pt;margin:0 0 2pt;font-weight:700}
+  #print-area .pr-sub{font-size:10pt;margin:0 0 12pt;color:#000}
+  #print-area .pr-note{font-size:10pt;margin:0 0 12pt;padding:6pt 8pt;border-left:2pt solid #000}
+  #print-area table{width:100%;border-collapse:collapse}
+  #print-area th{text-align:left;font-size:8pt;letter-spacing:1pt;text-transform:uppercase;border-bottom:1.5pt solid #000;padding:0 6pt 4pt 0}
+  #print-area td{vertical-align:top;border-bottom:.5pt solid #999;padding:7pt 6pt 7pt 0}
+  /* Una fila no debe partirse entre dos hojas */
+  #print-area tr{break-inside:avoid;page-break-inside:avoid}
+  #print-area .pr-n{width:18pt;font-size:9pt;color:#555}
+  #print-area .pr-name{font-size:12pt;font-weight:700}
+  #print-area .pr-desc{font-size:9pt;line-height:1.45;margin-top:2pt;max-width:62ch}
+  #print-area .pr-reps{white-space:nowrap;font-size:10pt;font-weight:700}
+  #print-area .pr-sets{white-space:nowrap;text-align:right;width:1%}
+  /* Una casilla por serie, para ir tachando en el gimnasio */
+  #print-area .pr-box{display:inline-block;width:11pt;height:11pt;border:1pt solid #000;margin-left:4pt}
+  #print-area .pr-foot{margin-top:16pt;font-size:7.5pt;letter-spacing:1pt;color:#666}
+}

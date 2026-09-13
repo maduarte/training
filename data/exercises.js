@@ -101,6 +101,107 @@ const EX={
 };
 
 // ══════════════════════════════════════════════════
+// VIDEOS DE TÉCNICA
+// ══════════════════════════════════════════════════
+// Un short por ejercicio. La mayoría salen del canal @priscilla_bc; los que ese
+// canal no cubre —glúteo medio, propiocepción, movilidad, técnica de carrera—
+// vienen de fisioterapeutas y entrenadores de running. Cuatro no son shorts sino
+// videos cortos normales, porque no había short decente del gesto.
+//
+// Cada ID se verificó contra la API de oEmbed de YouTube antes de entrar aquí.
+// Si alguno se cae (video borrado o privado), la tarjeta simplemente deja de
+// mostrar el botón ▶: getExVideo() devuelve '' y la UI no se rompe.
+const EX_VIDEO={
+  'Abdominales':'https://www.youtube.com/shorts/xjoMXqRR9GY',
+  'Activación articular':'https://www.youtube.com/shorts/Cb-jBlVjIck',
+  'Activación de core':'https://www.youtube.com/shorts/35790kaJKU8',
+  'Activación de glúteo':'https://www.youtube.com/shorts/ROouiUMfIZM',
+  'Activación tibial':'https://www.youtube.com/shorts/7eGyHcqXCMk',
+  'Balance a un pie':'https://www.youtube.com/shorts/6ZkcwH7WSU8',
+  'Balance a un pie (triángulo)':'https://www.youtube.com/shorts/T9kgcFio8UM',
+  'Balance a un pie con perturbación':'https://www.youtube.com/shorts/RMdL-XZ8qo8',
+  'Bird-dog':'https://www.youtube.com/shorts/qMlLvnT0tpY',
+  'Box step-up':'https://www.youtube.com/shorts/9XWxpd_kVko',
+  'Burpee':'https://www.youtube.com/shorts/Iv7MXi_1Trc',
+  'Clamshell':'https://www.youtube.com/shorts/Ja5F_H1mmZE',
+  'Clamshell con banda':'https://www.youtube.com/watch?v=KZNX0iN_dwQ',
+  'Core antirotación':'https://www.youtube.com/shorts/ZUEtG54s1_s',
+  'Curl femoral':'https://www.youtube.com/shorts/nmqG-tIr0hc',
+  'Curl femoral nórdico':'https://www.youtube.com/shorts/QZdcn8POwbw',
+  'Dead bug':'https://www.youtube.com/shorts/vtXgGkWd4UI',
+  'Dominadas':'https://www.youtube.com/shorts/clOsO7spoHI',
+  'Elevación de cadera lateral':'https://www.youtube.com/shorts/t66X2nKVVYw',
+  'Elevación de talón':'https://www.youtube.com/shorts/RT_NqPKIdAc',
+  'Elevación de talón a una pierna':'https://www.youtube.com/shorts/gcerLyBTZM0',
+  'Escalador':'https://www.youtube.com/shorts/jIzWec7cSyc',
+  'Estiramiento de psoas':'https://www.youtube.com/shorts/A0KM8Nl9-1M',
+  'Estiramientos':'https://www.youtube.com/shorts/kZoE5T2Kg2I',
+  'Estocada':'https://www.youtube.com/shorts/S9s1OjqupRw',
+  'Estocada asistida':'https://www.youtube.com/shorts/a-8T-qkWgu4',
+  'Estocada inversa':'https://www.youtube.com/shorts/umuACQ9Ks5c',
+  'Estocada lateral':'https://www.youtube.com/shorts/n8eU-tUFrl4',
+  'Extensión de cuádriceps':'https://www.youtube.com/shorts/S50jrJDzO4M',
+  'Face pull':'https://www.youtube.com/shorts/V9tGBT98SAU',
+  'Farmer walk':'https://www.youtube.com/watch?v=69hTPgHwA08',
+  'Flexiones':'https://www.youtube.com/shorts/S44aVCTshH8',
+  'Flexiones inclinadas':'https://www.youtube.com/shorts/S50YLFFO9J4',
+  'Foam roller':'https://www.youtube.com/shorts/WsAw5__Kogw',
+  'Fondos':'https://www.youtube.com/shorts/6KhFb6vwmR4',
+  'Hip thrust':'https://www.youtube.com/shorts/Ou1gpiHdSDg',
+  'Hollow hold':'https://www.youtube.com/shorts/lj_nWQiY3lE',
+  'Lunge con salto':'https://www.youtube.com/shorts/OwbHEI5OUt4',
+  'Monster walk':'https://www.youtube.com/shorts/-fg2NaYaqC8',
+  'Mountain climber':'https://www.youtube.com/shorts/dOcAOjpFweM',
+  'Movilidad de cadera':'https://www.youtube.com/shorts/M1WUFX8FgYw',
+  'Movilidad de espalda':'https://www.youtube.com/shorts/JdnCvW6Atrg',
+  'Movilidad de tobillos':'https://www.youtube.com/shorts/dYS9cgYk2lY',
+  'Paso de valla lateral':'https://www.youtube.com/shorts/SiLoUEFPrm0',
+  'Peso muerto a una pierna':'https://www.youtube.com/shorts/582jZEeuu6Y',
+  'Peso muerto rumano':'https://www.youtube.com/shorts/QjP9g7M_Idg',
+  'Plancha':'https://www.youtube.com/shorts/_Plb5jSSlX4',
+  'Plancha con toque de hombro':'https://www.youtube.com/shorts/auypDs3TVeM',
+  'Plancha lateral':'https://www.youtube.com/shorts/GaugOQIlUPs',
+  'Prensa de piernas':'https://www.youtube.com/shorts/2UcYXxnUlMQ',
+  'Press de banca':'https://www.youtube.com/shorts/WTjtrjFRPR0',
+  'Press de hombro':'https://www.youtube.com/shorts/hJrSssiKBXE',
+  'Press inclinado':'https://www.youtube.com/shorts/mQBjJK75ZK8',
+  'Propioceptivo':'https://www.youtube.com/shorts/EpQlpxPiLzM',
+  'Puente de glúteo':'https://www.youtube.com/shorts/1H918EAI7rs',
+  'Puente de glúteo a una pierna':'https://www.youtube.com/shorts/er4o_9KytD4',
+  'Remo':'https://www.youtube.com/shorts/b8FgtZlyEd4',
+  'Remo con mancuerna':'https://www.youtube.com/shorts/93D16icu4Ww',
+  'Rotación de cadera 90/90':'https://www.youtube.com/shorts/p2NUakSyUcE',
+  'Russian twist':'https://www.youtube.com/watch?v=hdSyLWfRJHc',
+  'Salto a la cuerda':'https://www.youtube.com/shorts/PwMFBdsHZEI',
+  'Salto al cajón':'https://www.youtube.com/shorts/YbtLiVd-ou8',
+  'Salto cajón 1 pierna':'https://www.youtube.com/shorts/AUS2UeFZ50Y',
+  'Sentadilla':'https://www.youtube.com/shorts/5c6mAD-7G8A',
+  'Sentadilla a una pierna':'https://www.youtube.com/shorts/48n3pVXfXoU',
+  'Sentadilla búlgara':'https://www.youtube.com/shorts/7Y8o061BxcQ',
+  'Sentadilla explosiva':'https://www.youtube.com/shorts/9hi65bciMdA',
+  'Sentadilla goblet':'https://www.youtube.com/shorts/AYJ8VDCS1mU',
+  'Sentadilla isométrica':'https://www.youtube.com/shorts/ewHzc2koaq8',
+  'Sentadilla sumo':'https://www.youtube.com/shorts/4YFyCNBwBwc',
+  'Skipping':'https://www.youtube.com/shorts/3VhOTIsDOZM',
+  'Step-down':'https://www.youtube.com/shorts/_CruoOR4I7k',
+  'Step-down asistido':'https://www.youtube.com/shorts/ISZqCKl_dsU',
+  'Step-up con rodilla alta':'https://www.youtube.com/shorts/RAFhhL4dTuE',
+  'Subida de escaleras':'https://www.youtube.com/shorts/9TtOeppXyj4',
+  'Superman':'https://www.youtube.com/shorts/pvbURmMVjkw',
+  'Talones al glúteo':'https://www.youtube.com/shorts/NUqz-qAch3Q',
+  'Trabajo de tobillo':'https://www.youtube.com/watch?v=Hq0vpuV1bhs',
+  'Yoga/movilidad':'https://www.youtube.com/shorts/GH52_yKBhw8',
+  'Zancada caminando':'https://www.youtube.com/shorts/GevUGbquI4s',
+};
+
+// URL del video de un ejercicio, o '' si no hay. Acepta el nombre en cualquier
+// forma que tolere exLookup() (tildes, mayúsculas, sinónimos, reps pegadas).
+function getExVideo(name){
+  const ex=exLookup(name);
+  return ex&&EX_VIDEO[ex.name]||'';
+}
+
+// ══════════════════════════════════════════════════
 // BÚSQUEDA DE DESCRIPCIÓN
 // ══════════════════════════════════════════════════
 // Los nombres llegan de tres lados y ninguno garantiza la forma exacta de la
