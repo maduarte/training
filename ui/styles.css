@@ -222,6 +222,26 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .m-tool-chk{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);cursor:pointer}
 .m-tool-chk input{accent-color:#7b9cf5;width:14px;height:14px}
 
+/* Plan con IA en el wizard */
+.wz-ia-btn{width:100%;padding:13px;background:linear-gradient(135deg,#7b9cf5,#a77bf5);border:none;border-radius:12px;color:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:800;letter-spacing:.5px;cursor:pointer;margin-top:8px}
+.wz-ia-btn:active{opacity:.85}
+.wz-ia-note{font-size:11px;color:var(--sub);line-height:1.5;margin-top:8px}
+
+/* Modal de la clave de API */
+#key-overlay{position:fixed;inset:0;z-index:210;display:none;align-items:flex-end;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.7)}
+#key-overlay.open{display:flex}
+#key-box{background:#12122a;border:1px solid #2a2a50;border-radius:16px;padding:22px;width:100%;max-width:480px;margin:0 auto;animation:slideUp .18s ease}
+.key-title{font-size:19px;font-weight:900;color:var(--cf-tx);margin-bottom:8px}
+.key-sub{font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:14px}
+.key-status{font-size:12px;min-height:18px;margin-top:8px;color:var(--dim)}
+.key-status.ok{color:#52c9a0}
+.key-status.err{color:#f4634a}
+.key-actions{display:flex;gap:8px;margin-top:10px}
+.key-btn{flex:1;padding:11px;background:none;border:1px solid #2a2a40;border-radius:10px;color:#aaaacc;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.key-btn.primary{background:#7b9cf5;border-color:#7b9cf5;color:#fff}
+.key-btn.danger{width:100%;margin-top:8px;border-color:#f4634a44;color:#f4634a;font-size:12px}
+.key-link{display:block;text-align:center;margin-top:12px;font-size:12px;color:#7b9cf5;text-decoration:none}
+
 /* EXERCISE OVERLAY */
 #ex-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:flex-end;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.65)}
 #ex-overlay.open{display:flex}

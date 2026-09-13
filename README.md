@@ -265,6 +265,38 @@ Al abrir un día de FUERZA:
 
 ---
 
+## Planes con IA — cada uno con su propia clave
+
+El wizard puede armar el plan con Claude en vez del esqueleto local. El modelo es
+`claude-opus-5` y **cada usuario pone su propia clave de Anthropic y paga su propio uso**
+(Ajustes → Plan con IA). Un plan de 19 semanas cuesta del orden de centavos.
+
+La app llama a `api.anthropic.com` **directamente desde el navegador**, con la cabecera
+`anthropic-dangerous-direct-browser-access`. No hay proxy: hubo uno en `/api/generate-plan`
+con una clave del servidor, y se eliminó porque era una URL pública que cualquiera podía
+usar para gastar créditos ajenos.
+
+La clave vive en `localStorage` bajo **`ncs_api_key`**, deliberadamente **sin el prefijo
+`tw_`**: `syncCollect()` sube al servidor toda clave `tw_` que no sea `tw_sync_`, y una
+clave de API no debe salir del dispositivo de su dueño ni viajar en el blob de sync. Si
+tocas el naming, respeta esto.
+
+Cómo se arma el plan:
+
+1. `buildPlanSkeleton()` construye el **calendario real** — fechas, ids (`w1d3`), etiquetas.
+   Esto no se le pide al modelo: son datos que ya tenemos y que solo podría equivocar.
+2. Se le pide a Claude el **contenido** de cada día vía structured outputs
+   (`output_config.format` con `json_schema`). El esquema restringe `exercises[].name` a
+   las claves de `EX`, así que cada ejercicio generado llega con ficha y video.
+3. El resultado se fusiona sobre el calendario y la app **recalcula `totalKm`** y fuerza
+   `km: 0` en FUERZA y DESCANSO. La aritmética del modelo no se usa.
+
+Va en **streaming** porque el pensamiento de Opus 5 y la respuesta comparten `max_tokens`,
+y un plan largo supera con holgura los ~16k donde las peticiones sin stream empiezan a
+chocar con timeouts.
+
+---
+
 ## Service Worker y modo offline
 
 La app funciona completamente sin conexión tras la primera visita con red. El SW (`sw.js`, cache `ncs-trail-v5`) pre-cachea en la instalación todos los recursos necesarios:

@@ -172,9 +172,10 @@
           </label>
           <div style="font-size:12px;color:var(--sub);margin-top:4px;padding-left:2px">Ej: un sábado libre, el siguiente ocupado. El plan ajustará los largos al viernes cuando corresponda.</div>
         </div>
+        <div id="wz-ia-row"></div>
         <div class="wizard-footer">
           <button class="wizard-btn-back" onclick="wizardBack(3)">← Volver</button>
-          <button class="wizard-btn-next" onclick="wizardGenerate()">Crear plan →</button>
+          <button class="wizard-btn-next" onclick="wizardGenerate('local')">Crear plan →</button>
         </div>
       </div>
 
@@ -188,7 +189,7 @@
         <div id="wz-error" class="wizard-error hidden"></div>
         <div class="wizard-footer" id="wz-error-footer" style="display:none">
           <button class="wizard-btn-back" onclick="wizardBack(3)">← Volver</button>
-          <button class="wizard-btn-next" onclick="wizardGenerate()">Reintentar</button>
+          <button class="wizard-btn-next" onclick="wizardGenerate(WZ.modo)">Reintentar</button>
         </div>
       </div>
 
@@ -270,6 +271,23 @@
     <div id="m-desc"></div>
     <div id="m-garmin"></div>
     <div id="m-body"></div>
+  </div>
+</div>
+
+<!-- API KEY MODAL -->
+<div id="key-overlay" onclick="if(event.target===this)closeKeyModal()">
+  <div id="key-box">
+    <div class="key-title">Clave de API de Anthropic</div>
+    <div class="key-sub">Para que la app arme planes con IA. La clave se guarda solo en este dispositivo y las llamadas van directo a Anthropic: no pasan por ningún servidor de esta app. El uso lo pagas tú, en tu propia cuenta.</div>
+    <input class="wizard-input" id="key-input" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+    <div id="key-status" class="key-status"></div>
+    <div class="key-actions">
+      <button class="key-btn" onclick="probarApiKey()">Probar</button>
+      <button class="key-btn primary" onclick="guardarApiKey()">Guardar</button>
+    </div>
+    <button class="key-btn danger" id="key-del" onclick="borrarApiKey()">Borrar la clave de este dispositivo</button>
+    <a class="key-link" href="https://platform.claude.com/get-api-key" target="_blank" rel="noopener noreferrer">¿No tienes una? Créala en platform.claude.com →</a>
+    <button class="ex-box-close" onclick="closeKeyModal()">CERRAR</button>
   </div>
 </div>
 

@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v24';
+const APP_VERSION = 'v25';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -65,6 +65,10 @@ function openSettings(){
     <div class="settings-row">
       <div><div class="settings-row-label">Actividades de Garmin</div><div class="settings-row-sub">${garminStatusHtml()}</div></div>
       <button class="settings-row-action" onclick="closeSettings();openGarminSetup()">${garminGistId()?'Cambiar →':'Conectar →'}</button>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-row-label">Plan con IA</div><div class="settings-row-sub">${hasApiKey()?'Clave: '+maskApiKey():'Sin clave — el wizard arma esqueletos'}</div></div>
+      <button class="settings-row-action" onclick="closeSettings();openKeyModal()">${hasApiKey()?'Cambiar →':'Agregar →'}</button>
     </div>
     <div class="settings-section-label" style="margin-top:16px">EXCEL</div>
     <div class="settings-row">
@@ -1623,7 +1627,66 @@ function wizardShowStep(n){
 function wizardNext(step){
   if(step===0) wizardShowStep(1);
   else if(step===1) wizardShowStep(2);
-  else if(step===2){ wizardShowStep(3); wzInitDayGrid(); }
+  else if(step===2){ wizardShowStep(3); wzInitDayGrid(); pintarFilaIA(); }
+}
+
+// El plan con IA solo aparece si hay clave: sin ella el botón no tendría con
+// qué funcionar, y ofrecerlo para después pedir una clave es una trampa.
+function pintarFilaIA(){
+  const el=document.getElementById('wz-ia-row');
+  if(!el)return;
+  el.innerHTML=hasApiKey()
+    ? `<button class="wz-ia-btn" onclick="wizardGenerate('ia')">✨ Crear plan con IA</button>
+       <div class="wz-ia-note">Usa tu clave de Anthropic y lo pagas tú (unos centavos). El botón de abajo arma un esqueleto editable sin IA ni costo.</div>`
+    : `<div class="wz-ia-note">¿Quieres que una IA arme el plan en vez de un esqueleto? Agrega tu clave de Anthropic en Ajustes → Plan con IA.</div>`;
+}
+
+// ══════════════════════════════════════════════════
+// CLAVE DE API (Ajustes)
+// ══════════════════════════════════════════════════
+function openKeyModal(){
+  document.getElementById('key-input').value=getApiKey();
+  document.getElementById('key-del').style.display=getApiKey()?'block':'none';
+  keyStatus('');
+  document.getElementById('key-overlay').classList.add('open');
+}
+function closeKeyModal(){ document.getElementById('key-overlay').classList.remove('open'); }
+function keyStatus(msg,tipo){
+  const el=document.getElementById('key-status');
+  el.textContent=msg||'';
+  el.className='key-status'+(tipo?' '+tipo:'');
+}
+function guardarApiKey(){
+  const k=document.getElementById('key-input').value.trim();
+  if(k&&!/^sk-ant-/.test(k)){ keyStatus('Una clave de Anthropic empieza con sk-ant-','err'); return; }
+  setApiKey(k);
+  keyStatus(k?'Clave guardada en este dispositivo.':'Clave borrada.','ok');
+  document.getElementById('key-del').style.display=k?'block':'none';
+  setTimeout(closeKeyModal,800);
+}
+function borrarApiKey(){
+  setApiKey('');
+  document.getElementById('key-input').value='';
+  document.getElementById('key-del').style.display='none';
+  keyStatus('Clave borrada de este dispositivo.','ok');
+}
+// Gasta un token de salida: es la forma barata de saber si la clave sirve
+// antes de lanzar la generación completa de un plan.
+async function probarApiKey(){
+  const k=document.getElementById('key-input').value.trim();
+  if(!k){ keyStatus('Pega una clave primero.','err'); return; }
+  const previa=getApiKey();
+  setApiKey(k);
+  keyStatus('Probando…');
+  try{
+    await claudeJSON({system:'Responde el JSON pedido.',user:'Devuelve {"ok":true}.',
+      schema:{type:'object',additionalProperties:false,required:['ok'],properties:{ok:{type:'boolean'}}},
+      maxTokens:256, effort:'low', thinking:{type:'disabled'}});
+    keyStatus('✓ La clave funciona.','ok');
+  }catch(e){
+    setApiKey(previa);
+    keyStatus('✗ '+e.message,'err');
+  }
 }
 function wizardBack(step){
   if(step===2) wizardShowStep(1);
@@ -1808,7 +1871,8 @@ function buildPlanSkeleton(cfg){
   return weeks;
 }
 
-function wizardGenerate(){
+async function wizardGenerate(modo){
+  WZ.modo=modo||'local';
   wizardShowStep('gen');
   document.getElementById('wz-error').classList.add('hidden');
   document.getElementById('wz-error-footer').style.display='none';
@@ -1827,11 +1891,23 @@ function wizardGenerate(){
     if(!raceName||!raceDate) throw new Error('Faltan el nombre o la fecha de la carrera.');
     if(parseYmd(raceDate)<=parseYmd(startDate)) throw new Error('La carrera debe ser posterior al inicio del plan.');
 
-    const weeks=buildPlanSkeleton({
-      name:raceName, distance, raceDate, startDate,
+    const cfg={
+      name:raceName, distance, elevation, raceDate, startDate,
       selectedDays:WZ.selectedDays||[2,4,6], altWeekend:!!WZ.altWeekend,
-      easyKm, maxKm
-    });
+      easyKm, maxKm, easyPaceSec, fastPaceSec
+    };
+    // El esqueleto local siempre se arma primero: aporta el calendario real
+    // (fechas, ids, etiquetas) y es el plan que queda si no se usa IA.
+    let weeks=buildPlanSkeleton(cfg);
+
+    if(WZ.modo==='ia'){
+      document.getElementById('wz-gen-label').textContent='Tu entrenador está armando el plan…';
+      document.getElementById('wz-gen-sub').textContent=`${weeks.length} semanas · esto tarda un par de minutos`;
+      weeks=await generarPlanIA(cfg,weeks,(n)=>{
+        document.getElementById('wz-gen-sub').textContent=
+          `${weeks.length} semanas · escribiendo… ${Math.round(n/1000)}k caracteres`;
+      });
+    }
 
     const raceId='race_'+Date.now();
     const newRace={id:raceId,name:raceName,date:raceDate,distance,elevation,defaultTitle:`⛰ ${raceName}`,weeks,status:'upcoming'};
@@ -1859,6 +1935,200 @@ function wizardGenerate(){
     document.getElementById('wz-gen-label').textContent='No se pudo crear el plan';
     document.getElementById('wz-gen-sub').textContent='';
   }
+}
+
+// ══════════════════════════════════════════════════
+// GENERACIÓN DE PLAN CON IA
+// ══════════════════════════════════════════════════
+// Cada persona pone su propia clave de Anthropic y paga su propio uso. La app
+// llama a api.anthropic.com directamente desde el navegador: no hay servidor
+// intermedio, así que la clave solo viaja del dispositivo de su dueño a
+// Anthropic. Antes existía un proxy en /api/generate-plan con una clave del
+// servidor; era una URL pública que cualquiera podía usar para gastar créditos
+// ajenos, y por eso se eliminó.
+//
+// La clave se guarda como 'ncs_api_key', SIN el prefijo tw_ a propósito:
+// syncCollect() sube al servidor toda clave tw_ que no sea tw_sync_, y una
+// clave de API no debe salir de este dispositivo ni compartirse por sync.
+const AI_MODEL='claude-opus-5';
+const AI_KEY_STORE='ncs_api_key';
+
+function getApiKey(){ try{ return localStorage.getItem(AI_KEY_STORE)||''; }catch(e){ return ''; } }
+function setApiKey(k){
+  try{ k?localStorage.setItem(AI_KEY_STORE,k):localStorage.removeItem(AI_KEY_STORE); }catch(e){}
+}
+function hasApiKey(){ return /^sk-ant-/.test(getApiKey()); }
+function maskApiKey(){
+  const k=getApiKey();
+  return k?k.slice(0,11)+'…'+k.slice(-4):'';
+}
+
+// Una llamada a la Messages API. Va en streaming porque un plan de 19 semanas
+// supera holgadamente los ~16k tokens de salida donde las peticiones sin
+// stream empiezan a chocar con timeouts. onProgress recibe los tokens que van
+// llegando para que el wizard no parezca colgado.
+async function claudeJSON({system,user,schema,maxTokens=64000,effort,thinking,onProgress}){
+  const key=getApiKey();
+  if(!key) throw new Error('Falta tu clave de API.');
+
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      // Sin esta cabecera el navegador no puede llamar a la API. Se llama
+      // "dangerous" porque expone la clave al front; aquí es aceptable porque
+      // la clave es del propio usuario y vive en su navegador.
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:AI_MODEL,
+      max_tokens:maxTokens,
+      stream:true,
+      system,
+      // En Opus 5 el pensamiento va activado por defecto y consume del mismo
+      // max_tokens que la respuesta: por eso el plan pide 64k y no 16k.
+      ...(thinking?{thinking}:{}),
+      output_config:{format:{type:'json_schema',schema},...(effort?{effort}:{})},
+      messages:[{role:'user',content:user}]
+    })
+  });
+
+  if(!res.ok){
+    let msg=`Error ${res.status}`;
+    try{ const j=await res.json(); msg=j.error?.message||msg; }catch(e){}
+    if(res.status===401) msg='Clave de API rechazada. Revísala en Ajustes.';
+    if(res.status===429) msg='Límite de uso alcanzado. Espera un momento y reintenta.';
+    if(res.status===400&&/credit balance/i.test(msg)) msg='Tu cuenta de Anthropic no tiene saldo.';
+    throw new Error(msg);
+  }
+
+  // SSE a mano: el navegador no trae parser de eventos para respuestas POST.
+  const reader=res.body.getReader(), dec=new TextDecoder();
+  let buf='', txt='', stop=null;
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    const lineas=buf.split('\n');
+    buf=lineas.pop();
+    for(const l of lineas){
+      if(!l.startsWith('data:'))continue;
+      let ev; try{ ev=JSON.parse(l.slice(5).trim()); }catch(e){ continue; }
+      if(ev.type==='content_block_delta'&&ev.delta?.type==='text_delta'){
+        txt+=ev.delta.text;
+        onProgress&&onProgress(txt.length);
+      }
+      if(ev.type==='message_delta'&&ev.delta?.stop_reason)stop=ev.delta.stop_reason;
+      if(ev.type==='error')throw new Error(ev.error?.message||'Error de la API');
+    }
+  }
+  if(stop==='max_tokens')throw new Error('La respuesta se cortó por longitud. Si el plan es muy largo, prueba con menos semanas.');
+  if(!txt.trim())throw new Error('La API no devolvió contenido.');
+  try{ return JSON.parse(txt); }
+  catch(e){ throw new Error('La respuesta no era JSON válido.'); }
+}
+
+// El esquema fija la forma y, sobre todo, restringe los ejercicios a los
+// nombres de la biblioteca: así cada uno llega con su ficha de técnica y su
+// video ya resueltos, sin inventar nombres que luego no calzan.
+function planSchema(){
+  return {
+    type:'object', additionalProperties:false, required:['weeks'],
+    properties:{ weeks:{ type:'array', items:{
+      type:'object', additionalProperties:false, required:['phase','days'],
+      properties:{
+        phase:{type:'string',enum:['BASE','DESARROLLO','PICO','DESCARGA','TAPER','CARRERA']},
+        days:{ type:'array', items:{
+          type:'object', additionalProperties:false, required:['type','session','km','desc'],
+          properties:{
+            type:{type:'string',enum:['SUAVE','MEDIO','INTENSO','FUERZA','DESCANSO']},
+            session:{type:'string'},
+            km:{type:'number'},
+            desc:{type:'string'},
+            sets:{type:'integer'},
+            exercises:{type:'array',items:{
+              type:'object', additionalProperties:false, required:['name','reps'],
+              properties:{name:{type:'string',enum:Object.keys(EX)},reps:{type:'string'}}
+            }}
+          }
+        }}
+      }
+    }}}
+  };
+}
+
+// El calendario (fechas, ids, etiquetas) lo arma la app, no el modelo: son
+// datos que ya tenemos y que el modelo solo podría equivocar. Le pedimos el
+// contenido del entrenamiento y nada más.
+function buildPlanIAPrompt(cfg,semanas){
+  const dias=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const disp=(cfg.selectedDays||[]).map(d=>dias[d]).join(', ')||'sin preferencia';
+  return `Arma un plan de entrenamiento de trail running.
+
+CARRERA
+- Nombre: ${cfg.name}
+- Fecha: ${cfg.raceDate}
+- Distancia: ${cfg.distance} km
+- Desnivel positivo: ${cfg.elevation} m
+
+ATLETA
+- Ritmo suave: ${fmtPace(cfg.easyPaceSec)}/km
+- Ritmo fuerte: ${fmtPace(cfg.fastPaceSec)}/km
+- Salida habitual hoy: ${cfg.easyKm} km
+- Salida más larga hecha hasta ahora: ${cfg.maxKm} km
+- Días que puede entrenar: ${disp}
+
+PLAN
+- ${semanas.length} semanas, de la ${semanas[0].dates} a la ${semanas[semanas.length-1].dates}.
+- Devuelve exactamente ${semanas.length} objetos en "weeks" y exactamente 7 días en cada "days", empezando en lunes.
+- Los días en que el atleta no puede entrenar van como DESCANSO.
+- La última semana termina el día de la carrera: ese día es type CARRERA... no existe ese tipo, usa MEDIO con la distancia de la carrera y ponle de session el nombre de la carrera, y marca la fase CARRERA.
+- km es 0 en FUERZA y DESCANSO.
+- En FUERZA incluye "sets" y de 4 a 7 "exercises" elegidos de la lista permitida, con "reps" como texto ("12", "12 c/lado", "40 seg").
+- "desc" es una instrucción concreta de 1 a 3 frases: qué hacer, a qué ritmo o esfuerzo, y qué cuidar. Nada de relleno motivacional.
+- Progresa el volumen con semanas de descarga periódicas y un taper real antes de la carrera. La salida larga no debe saltar más de ~20% de una semana a otra partiendo de ${cfg.maxKm} km.`;
+}
+
+async function generarPlanIA(cfg,semanas,onProgress){
+  const data=await claudeJSON({
+    system:'Eres un entrenador de trail running. Devuelves planes concretos y progresivos, sin relleno. Escribes en español de Chile, en segunda persona.',
+    user:buildPlanIAPrompt(cfg,semanas),
+    schema:planSchema(),
+    onProgress
+  });
+
+  const w=data?.weeks;
+  if(!Array.isArray(w)||!w.length)throw new Error('El plan vino vacío.');
+  if(w.length!==semanas.length)throw new Error(`Se pidieron ${semanas.length} semanas y llegaron ${w.length}.`);
+
+  // Fusionar contenido del modelo con el calendario real de la app.
+  return semanas.map((sem,i)=>{
+    const src=w[i];
+    if(!Array.isArray(src?.days)||src.days.length!==7)
+      throw new Error(`La semana ${i+1} no trae 7 días.`);
+    const days=sem.days.map((d,k)=>{
+      const g=src.days[k]||{};
+      const type=TYPE[g.type]?g.type:'DESCANSO';
+      const km=type==='FUERZA'||type==='DESCANSO'?0:Math.max(0,Number(g.km)||0);
+      const day={...d, type, km,
+        session:String(g.session||'Entrenamiento').slice(0,80),
+        desc:String(g.desc||'')};
+      if(type==='FUERZA'){
+        day.sets=Math.min(6,Math.max(1,parseInt(g.sets)||3));
+        // exRepair además normaliza nombres: si el modelo se salió del enum,
+        // la ficha se resuelve igual en vez de quedar muda.
+        day.exercises=exRepair((Array.isArray(g.exercises)?g.exercises:[])
+          .filter(e=>e&&e.name).map(e=>({name:String(e.name),reps:String(e.reps||'')})));
+        if(!day.exercises.length)day.exercises=SKEL_FUERZA.map(e=>({...e}));
+      }
+      return day;
+    });
+    // El total lo calcula la app: la aritmética del modelo no es de fiar.
+    const totalKm=Math.round(days.reduce((a,d)=>a+(d.km||0),0)*10)/10;
+    return {...sem, days, totalKm, phase:String(src.phase||sem.phase||'BASE')};
+  });
 }
 
 // ══════════════════════════════════════════════════

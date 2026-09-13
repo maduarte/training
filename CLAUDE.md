@@ -77,6 +77,12 @@ dispara) y `recargando` (para cortar bucles).
 ### 🟡 Pendiente futuro
 - `PACES_AUTO_UPDATE = false` en `core/app.js` — feature flag desactivado, retomar cuando se trabaje ritmos
 - Multi-usuario real: hoy `api/sync.js` guarda un blob por código de sync, sin cuentas ni permisos
+- **Clave de API de Anthropic**: vive en `localStorage['ncs_api_key']`, a propósito SIN el
+  prefijo `tw_`. `syncCollect()` sube toda clave `tw_` que no sea `tw_sync_`, y una clave
+  de API no debe viajar en el blob de sync ni compartirse entre dispositivos. No la
+  renombres a `tw_*`. Hubo un proxy en `api/generate-plan.js` con una clave del servidor;
+  se eliminó en sep-2026 porque era una URL pública que gastaba créditos del dueño del
+  repo. Ahora la app llama a `api.anthropic.com` directo desde el navegador.
 - `core/paces.js` separado cuando se retome lógica de ritmos
 
 ---
