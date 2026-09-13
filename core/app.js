@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v25';
+const APP_VERSION = 'v26';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -177,7 +177,13 @@ function renderCal(){
   const pb=document.getElementById('phase-badge');
   pb.textContent=w.phase;
   pb.style.cssText=`display:inline-block;margin-top:4px;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:1px;background:${pc}22;color:${pc};border:1px solid ${pc}44`;
-  document.getElementById('week-km').textContent=w.totalKm+' km planificados';
+  // "¿cómo voy?" de un vistazo: lo hecho contra lo planificado, no solo el plan.
+  const planKm=w.totalKm??weekPlanKm(w), realKm=weekRealKm(w);
+  const planD=weekPlanDplus(w), realD=weekRealDplus(w);
+  let resumen=`${fmtNum(realKm)} / ${fmtNum(planKm)} km`;
+  if(planD>0)resumen+=` · ${fmtM(realD)} / ${fmtM(planD)} m D+`;
+  else if(realD>0)resumen+=` · ${fmtM(realD)} m D+`;  // plan sin D+, pero Garmin sí lo trae
+  document.getElementById('week-km').textContent=resumen;
   // Legend
   document.getElementById('legend').innerHTML=
     ['SUAVE','MEDIO','INTENSO','FUERZA','DESCANSO'].map(t=>
@@ -210,10 +216,15 @@ function renderCal(){
     } else if(day.km>0){
       const estSec=estSeconds(day);
       const durStr=st.pacesSet?fmtDur(estSec):'';
+      const dp=dplusDe(day);
+      // El D+ comparte fila con la duración: la tarjeta es de móvil y un tercer
+      // renglón la desarma.
+      const meta=[durStr?`<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${durStr}`:'',
+                  dp?`↗${fmtM(dp)}m`:''].filter(Boolean).join(' · ');
       rightContent=`<div class="card-km">${fmtNum(day.km)}<span>km</span></div>`+
-        (durStr?`<div class="card-dur has-dur"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${durStr}</div>`:'');
+        (meta?`<div class="card-dur has-dur">${meta}</div>`:'');
     }
-    const logLine=log?.distance?`<div class="card-logged">✓ ${fmtNum(log.distance)}km${log.time?' · '+log.time:''}</div>`:'';
+    const logLine=log?.distance?`<div class="card-logged">✓ ${fmtNum(log.distance)}km${log.time?' · '+log.time:''}${dplusDe(log)?' · ↗'+fmtM(log.dplus)+'m':''}</div>`:'';
 
     card.innerHTML=`
       <div class="swap-badge">MOVER</div>
@@ -266,7 +277,7 @@ function renderCal(){
 function swapCards(a,b,wi){
   const weeks=JSON.parse(JSON.stringify(st.weeks));
   const d=weeks[wi].days;
-  ['session','type','km','desc','sets','exercises'].forEach(f=>{const tmp=d[a][f];d[a][f]=d[b][f];d[b][f]=tmp;});
+  ['session','type','km','dplus','desc','sets','exercises'].forEach(f=>{const tmp=d[a][f];d[a][f]=d[b][f];d[b][f]=tmp;});
   st.weeks=weeks;
   st.selected=null;
   S.set(`tw_weeks_${st.raceId}`,weeks);
@@ -315,8 +326,28 @@ function estSeconds(day){
   else if(day.type==='INTENSO')pace=easy*0.65+fast*0.35; // intervals have WU/CD
   else if(day.type==='MEDIO')pace=easy*0.55+fast*0.45;
   else pace=easy;
-  return Math.round(day.km*pace);
+  // Subir cuesta tiempo aparte del que cuesta avanzar: la regla de montaña es
+  // ~600 m de ascenso por hora. Sin esto, una sesión de 12 km con 700 m D+ se
+  // anuncia como 1h20 cuando en el cerro son más de 2h.
+  const subida=day.dplus>0?day.dplus/600*3600:0;
+  return Math.round(day.km*pace+subida);
 }
+
+// ── Desnivel ──────────────────────────────────────
+// day.dplus es opcional y su ausencia NO es cero: los planes anteriores a v26
+// no lo traen, y pintar 0 sería inventar un dato. Todo lo que muestra D+ se
+// apoya en estos helpers para decidir si hay algo real que mostrar.
+const dplusDe=o=>{const n=Number(o?.dplus);return isFinite(n)&&n>0?n:0;};
+function weekPlanKm(w){ return Math.round(w.days.reduce((a,d)=>a+(d.km||0),0)*10)/10; }
+function weekPlanDplus(w){ return w.days.reduce((a,d)=>a+dplusDe(d),0); }
+function weekRealKm(w){ return Math.round(w.days.reduce((a,d)=>a+(numIn(st.logs[d.id]?.distance)||0),0)*10)/10; }
+function weekRealDplus(w){ return w.days.reduce((a,d)=>a+dplusDe(st.logs[d.id]),0); }
+// ¿Algún día del plan trae D+? Decide si se muestra la mitad "planificado".
+function planTieneDplus(weeks){ return (weeks||[]).some(w=>w.days.some(d=>dplusDe(d)>0)); }
+// ¿Algún registro trae D+? Llega solo desde Garmin, incluso en planes viejos.
+function logsTienenDplus(){ return Object.values(st.logs||{}).some(l=>dplusDe(l)>0); }
+// Metros con separador de miles: 1.240 m se lee, 1240 m no tanto.
+function fmtM(n){ return Math.round(n||0).toLocaleString('es-CL'); }
 
 function updatePacePill(){
   const {easy,fast}=st.paces;
@@ -498,7 +529,10 @@ function garminLogEntry(a){
   const th=Math.floor(totalSec/3600), tm=Math.floor((totalSec%3600)/60), ts=totalSec%60;
   const time=th>0?`${th}:${String(tm).padStart(2,'0')}:${String(ts).padStart(2,'0')}`:`${tm}:${String(ts).padStart(2,'0')}`;
   const pace=a.avgPaceSecPerKm?`${fmtPace(a.avgPaceSecPerKm)}/km`:'';
-  return {th,tm,ts,distance:a.distanceKm||null,time,pace,fromGarmin:true};
+  // El desnivel llega gratis del reloj. null y no 0 cuando la actividad no lo
+  // trae: "no se midió" y "fue plano" no son lo mismo.
+  const dplus=a.elevGainM!=null?Math.round(a.elevGainM):null;
+  return {th,tm,ts,distance:a.distanceKm||null,dplus,time,pace,fromGarmin:true};
 }
 
 // Completa automáticamente el registro de entrenamiento real en los días que
@@ -737,6 +771,7 @@ function openModal(i){
     `<span class="m-chip" style="background:${ts.ch};color:${ts.tx}">${day.type}</span>`+
     (day.type==='FUERZA'?`<span class="m-km" style="color:${ts.tx}">${day.sets||3} series</span>`:
       day.km>0?`<span class="m-km" style="color:${ts.tx}">${fmtNum(day.km)} km</span>`+
+        (dplusDe(day)?`<span class="m-km" style="color:${ts.tx}">↗ ${fmtM(day.dplus)} m</span>`:'')+
         (st.pacesSet&&day.type!=='DESCANSO'?`<span class="m-km" style="color:var(--dim);font-size:12px">· ${fmtDur(estSeconds(day))}</span>`:''):'');
   document.getElementById('m-desc').textContent=day.desc;
   document.getElementById('m-garmin').innerHTML='';
@@ -782,6 +817,9 @@ function openModal(i){
     if(log?.th!==undefined){th=log.th;tm=log.tm;ts2=log.ts;}
     else{const est=estSeconds(day);th=Math.floor(est/3600)||'';tm=Math.floor((est%3600)/60)||'';ts2=est%60||'';}
     const dist=log?.distance!==undefined?log.distance:(day.km>0?day.km:'');
+    // Se prellena con lo planificado solo si el plan trae D+; si no, vacío,
+    // para no sugerir un número que nadie calculó.
+    const dpVal=log?.dplus!=null?log.dplus:(dplusDe(day)||'');
     body.innerHTML=`
       <div class="m-sec">Registrar entrenamiento real${log?.fromGarmin?' · <span style="color:#52c9a0;text-transform:none;letter-spacing:0">⌚ auto desde Garmin</span>':''}</div>
       <div class="m-lbl">TIEMPO REAL</div>
@@ -793,6 +831,10 @@ function openModal(i){
       <div class="m-dist-row">
         <div class="m-lbl">DISTANCIA (km)</div>
         <input class="m-input-dist" id="m-dist" type="text" value="${fmtNum(dist)}" inputmode="decimal" autocomplete="off" oninput="decInput(this);calcPace()">
+      </div>
+      <div class="m-dist-row">
+        <div class="m-lbl">DESNIVEL (m D+)</div>
+        <input class="m-input-dist" id="m-dplus" type="number" min="0" step="10" value="${dpVal}" inputmode="numeric" placeholder="0">
       </div>
       <div class="m-pace" id="m-pace"></div>
       <div class="m-rxn-row">
@@ -875,7 +917,9 @@ function _renderEditFields(type,day){
       <div class="edit-lbl" style="margin-bottom:4px">SESIÓN</div>
       <input class="edit-input edit-field-mb" id="edit-session" value="${escHtml(day.session||'')}" placeholder="Nombre de la sesión">
       ${showKm?`<div class="edit-lbl" style="margin-bottom:4px">DISTANCIA (km)</div>
-      <input class="edit-input-sm edit-field-mb" id="edit-km" type="text" value="${fmtNum(day.km||'')}" placeholder="0" inputmode="decimal" autocomplete="off" oninput="decInput(this)">`:''}
+      <input class="edit-input-sm edit-field-mb" id="edit-km" type="text" value="${fmtNum(day.km||'')}" placeholder="0" inputmode="decimal" autocomplete="off" oninput="decInput(this)">
+      <div class="edit-lbl" style="margin-top:10px;margin-bottom:4px">DESNIVEL (m D+)</div>
+      <input class="edit-input-sm edit-field-mb" id="edit-dplus" type="number" min="0" step="10" value="${day.dplus||''}" placeholder="0" inputmode="numeric">`:''}
       <div class="edit-lbl" style="margin-top:${showKm?10:0}px;margin-bottom:4px">DESCRIPCIÓN</div>
       <textarea class="edit-textarea edit-field-mb" id="edit-desc" rows="4" placeholder="Descripción del entrenamiento...">${escHtml(day.desc||'')}</textarea>`;
   }
@@ -935,6 +979,8 @@ function saveEdit(){
   const session=(document.getElementById('edit-session')?.value||'').trim()||day.session;
   const desc=(document.getElementById('edit-desc')?.value||'').trim();
   const km=type!=='FUERZA'&&type!=='DESCANSO'?numIn(document.getElementById('edit-km')?.value)||0:0;
+  const dpIn=document.getElementById('edit-dplus')?.value;
+  const dplus=type!=='FUERZA'&&type!=='DESCANSO'&&dpIn!==''&&dpIn!=null?Math.max(0,parseInt(dpIn)||0):0;
   const sets=type==='FUERZA'?parseInt(document.getElementById('edit-sets')?.value)||3:day.sets;
   const exercises=type==='FUERZA'?_editExercises.filter(e=>e.name.trim()):undefined;
 
@@ -947,6 +993,7 @@ function saveEdit(){
   if(!st.overrides[day.id]){
     st.overrides[day.id]={
       session:targetDay.session,type:targetDay.type,km:targetDay.km,
+      dplus:targetDay.dplus,
       desc:targetDay.desc,sets:targetDay.sets,
       exercises:targetDay.exercises?JSON.parse(JSON.stringify(targetDay.exercises)):undefined
     };
@@ -956,6 +1003,7 @@ function saveEdit(){
   targetDay.session=session;
   targetDay.type=type;
   targetDay.km=km;
+  if(dplus>0)targetDay.dplus=dplus; else delete targetDay.dplus;
   targetDay.desc=desc;
   if(sets!==undefined)targetDay.sets=sets;
   if(exercises!==undefined)targetDay.exercises=exercises;
@@ -989,6 +1037,10 @@ function restoreOriginal(){
   for(const w of st.weeks){for(const d of w.days){if(d.id===st.modalDay.id){targetDay=d;break;}}if(targetDay)break;}
   if(!targetDay)return;
   Object.assign(targetDay,orig);
+  // Si el original no tenía D+, hay que quitar la clave y no dejarla en
+  // undefined: dplusDe() la trataría como 0, pero el Excel la exportaría vacía
+  // y el día quedaría a medio camino entre "sin D+" y "con D+ cero".
+  if(orig.dplus===undefined||orig.dplus===null)delete targetDay.dplus;
   delete st.overrides[st.modalDay.id];
   S.set(`tw_weeks_${st.raceId}`,st.weeks);
   S.set(`tw_overrides_${st.raceId}`,st.overrides);
@@ -1016,10 +1068,13 @@ function saveLog(){
   const tm=parseInt(document.getElementById('m-tm')?.value)||0;
   const ts2=parseInt(document.getElementById('m-ts')?.value)||0;
   const dist=numIn(document.getElementById('m-dist')?.value)||0;
+  // Campo vacío → null, no 0: "no lo anoté" no es "fue plano".
+  const dpRaw=document.getElementById('m-dplus')?.value;
+  const dplus=dpRaw===''||dpRaw==null?null:Math.max(0,parseInt(dpRaw)||0);
   const timeStr=th>0?`${th}:${String(tm).padStart(2,'0')}:${String(ts2).padStart(2,'0')}`:`${tm}:${String(ts2).padStart(2,'0')}`;
   let pace='';
   if(dist>0&&(th||tm||ts2)){const spk=(th*3600+tm*60+ts2)/dist;pace=`${Math.floor(spk/60)}:${String(Math.round(spk%60)).padStart(2,'0')}/km`;}
-  st.logs={...st.logs,[st.modalDay.id]:{th,tm,ts:ts2,distance:dist||null,time:timeStr,pace}};
+  st.logs={...st.logs,[st.modalDay.id]:{th,tm,ts:ts2,distance:dist||null,dplus,time:timeStr,pace}};
   S.set(`tw_logs_${st.raceId}`,st.logs);
   // Update pace profile from real data (controlled by feature flag)
   if(PACES_AUTO_UPDATE && dist>0)updatePacesFromLog(st.modalDay,th*3600+tm*60+ts2,dist);
@@ -1157,8 +1212,8 @@ document.getElementById('modal').addEventListener('touchend',e=>{if(e.changedTou
 // ANALYTICS
 // ══════════════════════════════════════════════════
 function renderStats(){
-  let totKm=0,totMins=0,totPlan=0,adhPlan=0,adhKm=0;
-  const kmData=[],timeData=[];
+  let totKm=0,totMins=0,totPlan=0,adhPlan=0,adhKm=0,totDplus=0;
+  const kmData=[],timeData=[],dData=[];
   st.weeks.forEach(w=>{
     let wkm=0,wm=0;
     w.days.forEach(d=>{
@@ -1171,27 +1226,56 @@ function renderStats(){
         adhKm+=numIn(l?.distance||0)||0;
       }
     });
-    totKm+=wkm;totMins+=wm;totPlan+=w.totalKm;
+    const wd=weekRealDplus(w);
+    totKm+=wkm;totMins+=wm;totPlan+=w.totalKm;totDplus+=wd;
     const lb=typeof w.num==='number'?`S${w.num}`:'🏁';
     kmData.push({lb,plan:w.totalKm,real:Math.round(wkm*10)/10});
     timeData.push({lb,m:Math.round(wm)});
+    dData.push({lb,plan:weekPlanDplus(w),real:wd});
   });
   const adh=adhPlan?Math.round(adhKm/adhPlan*100):0;
   const semAct=st.weeks.filter(w=>w.days.some(d=>{const l=st.logs[d.id];return l?.distance||l?.time;})).length;
   const fmt=m=>m>=60?`${Math.floor(m/60)}h ${Math.round(m%60)}m`:`${Math.round(m)}m`;
+
+  // m/km es la métrica de trail: dice si el terreno que entrenas se parece al
+  // de la carrera. 2500 m en 44 km son 57 m/km; entrenar a 20 m/km es preparar
+  // un cerro corriendo en plano, y hasta ahora nada lo delataba.
+  const race=getRaceById(st.raceId);
+  const ratio=totKm>0?totDplus/totKm:0;
+  const ratioRace=race&&race.distance>0?race.elevation/race.distance:0;
+  const hayD=totDplus>0;
+  const tarjetasD=hayD?`
+    <div class="stat-card" style="border-color:#c9a05233"><div class="stat-val" style="color:#c9a052;font-size:18px">${fmtM(totDplus)}</div><div class="stat-lbl">m D+ reales</div></div>
+    <div class="stat-card" style="border-color:#a77bf533"><div class="stat-val" style="color:#a77bf5">${Math.round(ratio)}</div><div class="stat-lbl">m/km${ratioRace?` · carrera ${Math.round(ratioRace)}`:''}</div></div>`:'';
+
   document.getElementById('stat-grid').innerHTML=`
     <div class="stat-card" style="border-color:#52c9a033"><div class="stat-val" style="color:#52c9a0">${Math.round(totKm)}</div><div class="stat-lbl">km reales</div></div>
     <div class="stat-card" style="border-color:#7b9cf533"><div class="stat-val" style="color:#7b9cf5;font-size:${totMins>0?'18px':'24px'}">${totMins>0?fmt(totMins):'–'}</div><div class="stat-lbl">tiempo total</div></div>
     <div class="stat-card" style="border-color:#f5b73133"><div class="stat-val" style="color:#f5b731">${adh}%</div><div class="stat-lbl">adherencia</div></div>
-    <div class="stat-card" style="border-color:#f4634a33"><div class="stat-val" style="color:#f4634a">${semAct}</div><div class="stat-lbl">semanas activas</div></div>`;
+    <div class="stat-card" style="border-color:#f4634a33"><div class="stat-val" style="color:#f4634a">${semAct}</div><div class="stat-lbl">semanas activas</div></div>
+    ${tarjetasD}`;
   if(st.chartKm){st.chartKm.destroy();st.chartKm=null;}
   if(st.chartT){st.chartT.destroy();st.chartT=null;}
+  if(st.chartD){st.chartD.destroy();st.chartD=null;}
   const cOpts={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#b4b4cc',font:{size:10}}},tooltip:{callbacks:{label:(c)=>`${c.dataset.label}: ${fmtNum(c.parsed.y)}`}}},scales:{x:{ticks:{color:'#8888aa',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{color:'#141420'}},y:{ticks:{color:'#8888aa',font:{size:9}},grid:{color:'#141420'}}}};
   st.chartKm=new Chart(document.getElementById('chart-km').getContext('2d'),{type:'line',data:{labels:kmData.map(d=>d.lb),datasets:[
     {label:'Plan',data:kmData.map(d=>d.plan),borderColor:'#2a2a35',borderDash:[4,2],borderWidth:1.5,pointRadius:0,tension:.3},
     {label:'Real',data:kmData.map(d=>d.real),borderColor:'#52c9a0',backgroundColor:'#52c9a015',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#52c9a0',fill:true,tension:.3},
   ]},options:{...cOpts}});
   st.chartT=new Chart(document.getElementById('chart-t').getContext('2d'),{type:'bar',data:{labels:timeData.map(d=>d.lb),datasets:[{label:'min',data:timeData.map(d=>d.m),backgroundColor:'#7b9cf544',borderColor:'#7b9cf5',borderWidth:1,borderRadius:3}]},options:{...cOpts,plugins:{legend:{display:false}}}});
+
+  // El gráfico de D+ solo existe si hay desnivel del que hablar. Un plan viejo
+  // sin D+ pero con Garmin conectado muestra solo la serie real.
+  const hayPlanD=dData.some(d=>d.plan>0), hayRealD=dData.some(d=>d.real>0);
+  document.getElementById('card-dplus').classList.toggle('hidden',!hayPlanD&&!hayRealD);
+  if(hayPlanD||hayRealD){
+    const dsD=[];
+    if(hayPlanD)dsD.push({label:'Plan',data:dData.map(d=>d.plan),borderColor:'#2a2a35',borderDash:[4,2],borderWidth:1.5,pointRadius:0,tension:.3});
+    if(hayRealD)dsD.push({label:'Real',data:dData.map(d=>d.real),borderColor:'#c9a052',backgroundColor:'#c9a05215',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#c9a052',fill:true,tension:.3});
+    st.chartD=new Chart(document.getElementById('chart-d').getContext('2d'),{
+      type:'line',data:{labels:dData.map(d=>d.lb),datasets:dsD},
+      options:{...cOpts,plugins:{...cOpts.plugins,tooltip:{callbacks:{label:(c)=>`${c.dataset.label}: ${fmtM(c.parsed.y)} m`}}}}});
+  }
   const rc={'😊':0,'😐':0,'😞':0};
   Object.values(st.reactions).forEach(r=>{if(r&&rc[r]!==undefined)rc[r]++;});
   const tot=Object.values(rc).reduce((s,c)=>s+c,0);
@@ -1289,6 +1373,16 @@ function syncGetCode(){ return localStorage.getItem('tw_sync_code')||''; }
 function syncNewCode(){
   const b=new Uint8Array(16); crypto.getRandomValues(b);
   return Array.from(b, x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+// Id de carrera. La marca de tiempo sola no basta: dos carreras creadas en el
+// mismo milisegundo colisionaban, y como las claves de storage cuelgan del id
+// (tw_weeks_<id>, tw_logs_<id>) las dos terminaban compartiendo los mismos
+// datos. El sufijo aleatorio lo hace imposible.
+function nuevoRaceId(prefijo){
+  const b=new Uint8Array(4); crypto.getRandomValues(b);
+  const rnd=Array.from(b, x=>x.toString(16).padStart(2,'0')).join('');
+  return `${prefijo}_${Date.now()}_${rnd}`;
 }
 
 function syncFmtTs(ts){
@@ -1796,9 +1890,12 @@ function skelPhase(i,n){
 }
 
 function buildPlanSkeleton(cfg){
-  const {name,distance,raceDate,startDate,selectedDays,altWeekend,easyKm,maxKm}=cfg;
+  const {name,distance,elevation,raceDate,startDate,selectedDays,altWeekend,easyKm,maxKm}=cfg;
   const race=parseYmd(raceDate);
   const start=parseYmd(startDate);
+  // Metros de subida por kilómetro que exige la carrera. Si no se declaró
+  // desnivel, el plan sale sin D+ y la app no muestra nada de desnivel.
+  const ratioCarrera=elevation>0&&distance>0?elevation/distance:0;
   // La semana arranca el lunes de la semana de inicio
   const first=new Date(start);
   first.setDate(first.getDate()-((first.getDay()+6)%7));
@@ -1815,6 +1912,12 @@ function buildPlanSkeleton(cfg){
     if((i+1)%4===0) longKm*=0.75;
     if(phase==='TAPER') longKm*=0.55;
     longKm=Math.max(4,Math.round(longKm));
+
+    // Desnivel: se apunta a la razón m/km de la carrera, entrando de a poco
+    // (la mitad al principio, completa hacia el pico). Empezar directo en el
+    // m/km de la carrera sería un salto de carga que nadie debería dar.
+    const rampaD=0.5+0.5*Math.min(1,i/peak);
+    const mPorKm=ratioCarrera*rampaD;
 
     // Días disponibles de esta semana
     let dows=selectedDays.slice();
@@ -1834,10 +1937,12 @@ function buildPlanSkeleton(cfg){
       let type=asignado[d.getDay()]||'DESCANSO';
       let km=0, session='Descanso', desc=SKEL_DESC[type], sets, exercises;
 
+      let dplus;
       if(iso===raceYmd){
         type='INTENSO'; km=distance||0;
         session=`🎯 ${name}`;
         desc='Día de carrera. Sal conservador y guarda algo para el último tercio.';
+        dplus=elevation||undefined;   // el día de la carrera es el desnivel real
       } else if(d>race){
         type='DESCANSO'; session='Recuperación';
         desc='Post-carrera: descanso o caminata suave.';
@@ -1852,9 +1957,14 @@ function buildPlanSkeleton(cfg){
         session='Fuerza – Tren inferior y core';
       }
 
+      // Los días de correr heredan el m/km de la semana; FUERZA y DESCANSO no
+      // suben nada. Sin desnivel declarado, dplus queda ausente (no 0).
+      if(dplus===undefined&&mPorKm>0&&km>0)dplus=Math.round(km*mPorKm/10)*10;
+
       const day={id:`w${i+1}d${k}`,date:iso,label:dayLabelOf(d),session,type,km,desc};
       if(sets)day.sets=sets;
       if(exercises)day.exercises=exercises;
+      if(dplus)day.dplus=dplus;
       days.push(day);
     }
 
@@ -1865,6 +1975,7 @@ function buildPlanSkeleton(cfg){
       dates:`${shortDateOf(ini)} – ${shortDateOf(fin)}`,
       phase,
       totalKm:days.reduce((a,x)=>a+(x.km||0),0),
+      totalDplus:days.reduce((a,x)=>a+(x.dplus||0),0),
       days
     });
   }
@@ -1909,7 +2020,7 @@ async function wizardGenerate(modo){
       });
     }
 
-    const raceId='race_'+Date.now();
+    const raceId=nuevoRaceId('race');
     const newRace={id:raceId,name:raceName,date:raceDate,distance,elevation,defaultTitle:`⛰ ${raceName}`,weeks,status:'upcoming'};
 
     if(WZ.isOnboarding){
@@ -2046,6 +2157,7 @@ function planSchema(){
             type:{type:'string',enum:['SUAVE','MEDIO','INTENSO','FUERZA','DESCANSO']},
             session:{type:'string'},
             km:{type:'number'},
+            dplus:{type:'number'},
             desc:{type:'string'},
             sets:{type:'integer'},
             exercises:{type:'array',items:{
@@ -2086,6 +2198,11 @@ PLAN
 - Los días en que el atleta no puede entrenar van como DESCANSO.
 - La última semana termina el día de la carrera: ese día es type CARRERA... no existe ese tipo, usa MEDIO con la distancia de la carrera y ponle de session el nombre de la carrera, y marca la fase CARRERA.
 - km es 0 en FUERZA y DESCANSO.
+- "dplus" son los metros de ascenso acumulado de la sesión, 0 en FUERZA y DESCANSO.
+  La carrera exige ${Math.round(cfg.elevation/Math.max(1,cfg.distance))} m de subida por kilómetro: progresa el desnivel igual
+  que el volumen, entrando de a poco y con el pico antes del taper. No pongas el
+  mismo m/km todas las semanas ni en todas las sesiones — los rodajes suaves son
+  más planos y las salidas largas y las de calidad en cuesta son las que suben.
 - En FUERZA incluye "sets" y de 4 a 7 "exercises" elegidos de la lista permitida, con "reps" como texto ("12", "12 c/lado", "40 seg").
 - "desc" es una instrucción concreta de 1 a 3 frases: qué hacer, a qué ritmo o esfuerzo, y qué cuidar. Nada de relleno motivacional.
 - Progresa el volumen con semanas de descarga periódicas y un taper real antes de la carrera. La salida larga no debe saltar más de ~20% de una semana a otra partiendo de ${cfg.maxKm} km.`;
@@ -2112,9 +2229,11 @@ async function generarPlanIA(cfg,semanas,onProgress){
       const g=src.days[k]||{};
       const type=TYPE[g.type]?g.type:'DESCANSO';
       const km=type==='FUERZA'||type==='DESCANSO'?0:Math.max(0,Number(g.km)||0);
+      const dplus=type==='FUERZA'||type==='DESCANSO'?0:Math.max(0,Math.round(Number(g.dplus)||0));
       const day={...d, type, km,
         session:String(g.session||'Entrenamiento').slice(0,80),
         desc:String(g.desc||'')};
+      if(dplus>0)day.dplus=dplus; else delete day.dplus;
       if(type==='FUERZA'){
         day.sets=Math.min(6,Math.max(1,parseInt(g.sets)||3));
         // exRepair además normaliza nombres: si el modelo se salió del enum,
@@ -2125,9 +2244,10 @@ async function generarPlanIA(cfg,semanas,onProgress){
       }
       return day;
     });
-    // El total lo calcula la app: la aritmética del modelo no es de fiar.
+    // Los totales los calcula la app: la aritmética del modelo no es de fiar.
     const totalKm=Math.round(days.reduce((a,d)=>a+(d.km||0),0)*10)/10;
-    return {...sem, days, totalKm, phase:String(src.phase||sem.phase||'BASE')};
+    const totalDplus=days.reduce((a,d)=>a+(d.dplus||0),0);
+    return {...sem, days, totalKm, totalDplus, phase:String(src.phase||sem.phase||'BASE')};
   });
 }
 
@@ -2151,7 +2271,7 @@ function exportToExcel(){
   // La importación busca las hojas por nombre, así que el orden es libre.
 
   // Sheet 2: full plan
-  const hdrs=['Semana','Fase','Km_Semana','Fecha','Día','Tipo','Km_Plan','Series','Sesión','Descripción','Ejercicios','Km_Real','Tiempo_Real','Reacción'];
+  const hdrs=['Semana','Fase','Km_Semana','Dplus_Semana','Fecha','Día','Tipo','Km_Plan','Dplus_Plan','Series','Sesión','Descripción','Ejercicios','Km_Real','Dplus_Real','Tiempo_Real','Reacción'];
   const rows=[hdrs];
   st.weeks.forEach(w=>{
     w.days.forEach(day=>{
@@ -2165,13 +2285,15 @@ function exportToExcel(){
       // hh:mm:ss para que el import no tenga que adivinar el formato.
       if(log.th!==undefined)timeStr=`${String(log.th).padStart(2,'0')}:${String(log.tm||0).padStart(2,'0')}:${String(log.ts||0).padStart(2,'0')}`;
       else if(log.time)timeStr=log.time;
+      // Celda vacía y no 0 cuando no hay desnivel: al reimportar, un 0 sería un
+      // dato inventado y encendería toda la UI de D+ con ceros.
       rows.push([
-        w.num??'Carrera', w.phase||'', w.totalKm||0,
+        w.num??'Carrera', w.phase||'', w.totalKm||0, weekPlanDplus(w)||'',
         day.date, day.label, day.type,
-        day.km||0, day.sets||'',
+        day.km||0, day.dplus||'', day.sets||'',
         day.session, day.desc||'',
         exStr,
-        log.distance||log.km||'', timeStr, rxn
+        log.distance||log.km||'', log.dplus??'', timeStr, rxn
       ]);
     });
   });
@@ -2197,96 +2319,7 @@ function importFromExcel(){
     const reader=new FileReader();
     reader.onload=evt=>{
       try{
-        const wb=XLSX.read(evt.target.result,{type:'binary'});
-
-        // Race metadata
-        const raceWs=wb.Sheets['Carrera'];
-        if(!raceWs)throw new Error('Hoja "Carrera" no encontrada');
-        const raceRows=XLSX.utils.sheet_to_json(raceWs,{header:1});
-        if(raceRows.length<2)throw new Error('Hoja "Carrera" sin datos');
-        const [raceName,raceDate,raceDist,raceElev]=raceRows[1];
-        if(!raceName||!raceDate)throw new Error('Faltan nombre o fecha de carrera');
-
-        // Plan
-        const planWs=wb.Sheets['Plan'];
-        if(!planWs)throw new Error('Hoja "Plan" no encontrada');
-        const planRows=XLSX.utils.sheet_to_json(planWs,{header:1});
-        if(planRows.length<2)throw new Error('Hoja "Plan" sin datos');
-
-        const colHdrs=planRows[0];
-        const ix={};
-        colHdrs.forEach((h,i)=>ix[String(h)]=i);
-
-        const raceId='import_'+Date.now();
-        const logsOut={}, rxnOut={};
-        const weeksArr=[];
-        let curWeek=null, curWNum=undefined;
-
-        planRows.slice(1).forEach(row=>{
-          const wNum=row[ix['Semana']];
-          if(wNum!==curWNum){
-            curWeek={
-              num:typeof wNum==='number'?wNum:null,
-              phase:String(row[ix['Fase']]||'BASE'),
-              totalKm:numIn(row[ix['Km_Semana']])||0,
-              dates:'', days:[]
-            };
-            weeksArr.push(curWeek);
-            curWNum=wNum;
-          }
-          const di=curWeek.days.length;
-          const dayId=`${raceId}_w${weeksArr.length-1}_d${di}`;
-          const tipo=String(row[ix['Tipo']]||'DESCANSO').toUpperCase();
-          const ejStr=String(row[ix['Ejercicios']]||'');
-          const exercises=ejStr?ejStr.split(';').map(s=>exSplitReps(s)).filter(Boolean):undefined;
-          const day={
-            id:dayId,
-            date:String(row[ix['Fecha']]||''),
-            label:String(row[ix['Día']]||''),
-            session:String(row[ix['Sesión']]||''),
-            type:tipo,
-            km:numIn(row[ix['Km_Plan']])||0,
-            desc:String(row[ix['Descripción']]||'')
-          };
-          const sets=row[ix['Series']];
-          if(sets)day.sets=Number(sets)||3;
-          if(exercises&&exercises.length)day.exercises=exercises;
-          curWeek.days.push(day);
-          if(day.date){
-            const d0=curWeek.dates.split('–')[0].trim();
-            curWeek.dates=(d0||day.date)+' – '+day.date;
-          }
-
-          // Logged data
-          const kmReal=row[ix['Km_Real']];
-          const tReal=String(row[ix['Tiempo_Real']]||'').trim();
-          const rxn=String(row[ix['Reacción']]||'').trim();
-          if(kmReal||tReal){
-            // Acepta "hh:mm:ss" y "mm:ss": saveLog() omite las horas cuando la
-            // sesión baja de 60min, y un Excel escrito a mano puede traer cualquiera.
-            const pts=tReal.split(':').map(n=>Number(n)||0);
-            const [th,tm,ts]=pts.length>=3?pts:[0,pts[0]||0,pts[1]||0];
-            const dist=numIn(kmReal)||0;
-            const secs=th*3600+tm*60+ts;
-            let pace='';
-            if(dist>0&&secs>0){const spk=secs/dist;pace=`${Math.floor(spk/60)}:${String(Math.round(spk%60)).padStart(2,'0')}/km`;}
-            logsOut[dayId]={th,tm,ts,distance:dist||null,time:tReal,pace};
-          }
-          if(rxn&&rxn!=='undefined')rxnOut[dayId]=rxn;
-        });
-
-        const newRace={
-          id:raceId, name:String(raceName), date:String(raceDate),
-          distance:Number(raceDist)||0, elevation:Number(raceElev)||0,
-          weeks:weeksArr
-        };
-        const all=S.get('tw_races')||[];
-        all.push(newRace);
-        S.set('tw_races',all);
-        S.set(`tw_weeks_${raceId}`,weeksArr);
-        if(Object.keys(logsOut).length)S.set(`tw_logs_${raceId}`,logsOut);
-        if(Object.keys(rxnOut).length)S.set(`tw_rxn_${raceId}`,rxnOut);
-
+        const raceId=importWorkbook(XLSX.read(evt.target.result,{type:'binary'}));
         closeSettings();
         launchApp('mauricio',raceId);
       }catch(err){alert('Error al importar: '+err.message);}
@@ -2294,6 +2327,108 @@ function importFromExcel(){
     reader.readAsBinaryString(file);
   };
   input.click();
+}
+
+// Convierte un libro ya parseado en una carrera nueva y devuelve su id. Está
+// separado de importFromExcel() para poder ejercitarlo sin pasar por el diálogo
+// de archivos del navegador.
+function importWorkbook(wb){
+  // Race metadata
+  const raceWs=wb.Sheets['Carrera'];
+  if(!raceWs)throw new Error('Hoja "Carrera" no encontrada');
+  const raceRows=XLSX.utils.sheet_to_json(raceWs,{header:1});
+  if(raceRows.length<2)throw new Error('Hoja "Carrera" sin datos');
+  const [raceName,raceDate,raceDist,raceElev]=raceRows[1];
+  if(!raceName||!raceDate)throw new Error('Faltan nombre o fecha de carrera');
+
+  // Plan
+  const planWs=wb.Sheets['Plan'];
+  if(!planWs)throw new Error('Hoja "Plan" no encontrada');
+  const planRows=XLSX.utils.sheet_to_json(planWs,{header:1});
+  if(planRows.length<2)throw new Error('Hoja "Plan" sin datos');
+
+  const colHdrs=planRows[0];
+  const ix={};
+  colHdrs.forEach((h,i)=>ix[String(h)]=i);
+
+  const raceId=nuevoRaceId('import');
+  const logsOut={}, rxnOut={};
+  const weeksArr=[];
+  let curWeek=null, curWNum=undefined;
+
+  planRows.slice(1).forEach(row=>{
+    const wNum=row[ix['Semana']];
+    if(wNum!==curWNum){
+      curWeek={
+        num:typeof wNum==='number'?wNum:null,
+        phase:String(row[ix['Fase']]||'BASE'),
+        totalKm:numIn(row[ix['Km_Semana']])||0,
+        dates:'', days:[]
+      };
+      // Dplus_Semana se reconstruye sumando los días al cerrar el import,
+      // igual que hace la app en todas partes: no se confía en la celda.
+      weeksArr.push(curWeek);
+      curWNum=wNum;
+    }
+    const di=curWeek.days.length;
+    const dayId=`${raceId}_w${weeksArr.length-1}_d${di}`;
+    const tipo=String(row[ix['Tipo']]||'DESCANSO').toUpperCase();
+    const ejStr=String(row[ix['Ejercicios']]||'');
+    const exercises=ejStr?ejStr.split(';').map(s=>exSplitReps(s)).filter(Boolean):undefined;
+    const day={
+      id:dayId,
+      date:String(row[ix['Fecha']]||''),
+      label:String(row[ix['Día']]||''),
+      session:String(row[ix['Sesión']]||''),
+      type:tipo,
+      km:numIn(row[ix['Km_Plan']])||0,
+      desc:String(row[ix['Descripción']]||'')
+    };
+    const sets=row[ix['Series']];
+    if(sets)day.sets=Number(sets)||3;
+    if(exercises&&exercises.length)day.exercises=exercises;
+    // Columna opcional: los .xlsx exportados antes de v26 no la traen, y
+    // una celda vacía tiene que quedar como ausente, nunca como 0.
+    const dpPlan=ix['Dplus_Plan']!==undefined?numIn(row[ix['Dplus_Plan']]):0;
+    if(dpPlan>0)day.dplus=Math.round(dpPlan);
+    curWeek.days.push(day);
+    if(day.date){
+      const d0=curWeek.dates.split('–')[0].trim();
+      curWeek.dates=(d0||day.date)+' – '+day.date;
+    }
+
+    // Logged data
+    const kmReal=row[ix['Km_Real']];
+    const dpReal=ix['Dplus_Real']!==undefined?numIn(row[ix['Dplus_Real']]):0;
+    const tReal=String(row[ix['Tiempo_Real']]||'').trim();
+    const rxn=String(row[ix['Reacción']]||'').trim();
+    if(kmReal||tReal||dpReal>0){
+      // Acepta "hh:mm:ss" y "mm:ss": saveLog() omite las horas cuando la
+      // sesión baja de 60min, y un Excel escrito a mano puede traer cualquiera.
+      const pts=tReal.split(':').map(n=>Number(n)||0);
+      const [th,tm,ts]=pts.length>=3?pts:[0,pts[0]||0,pts[1]||0];
+      const dist=numIn(kmReal)||0;
+      const secs=th*3600+tm*60+ts;
+      let pace='';
+      if(dist>0&&secs>0){const spk=secs/dist;pace=`${Math.floor(spk/60)}:${String(Math.round(spk%60)).padStart(2,'0')}/km`;}
+      logsOut[dayId]={th,tm,ts,distance:dist||null,dplus:dpReal>0?Math.round(dpReal):null,time:tReal,pace};
+    }
+    if(rxn&&rxn!=='undefined')rxnOut[dayId]=rxn;
+  });
+
+  weeksArr.forEach(w=>{w.totalDplus=w.days.reduce((a,d)=>a+(d.dplus||0),0);});
+  const newRace={
+    id:raceId, name:String(raceName), date:String(raceDate),
+    distance:Number(raceDist)||0, elevation:Number(raceElev)||0,
+    weeks:weeksArr
+  };
+  const all=S.get('tw_races')||[];
+  all.push(newRace);
+  S.set('tw_races',all);
+  S.set(`tw_weeks_${raceId}`,weeksArr);
+  if(Object.keys(logsOut).length)S.set(`tw_logs_${raceId}`,logsOut);
+  if(Object.keys(rxnOut).length)S.set(`tw_rxn_${raceId}`,rxnOut);
+  return raceId;
 }
 
 // Splash → app or onboarding

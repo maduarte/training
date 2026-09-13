@@ -194,15 +194,18 @@ así que el orden no importa, pero los nombres de hoja y de columna sí.
 | `Semana` | Número de semana. Al cambiar de valor empieza una semana nueva |
 | `Fase` | Texto libre (`BASE`, `DESARROLLO`, `PICO`, `TAPER`, `CARRERA`…). Define el color |
 | `Km_Semana` | Total planificado de la semana |
+| `Dplus_Semana` | Total de desnivel planificado de la semana. Se recalcula al importar |
 | `Fecha` | `YYYY-MM-DD` |
 | `Día` | Etiqueta visible, p. ej. `Sáb 22 Ago` |
 | `Tipo` | `SUAVE` · `MEDIO` · `INTENSO` · `FUERZA` · `DESCANSO` — cualquier otro valor rompe los colores |
 | `Km_Plan` | Distancia planificada. `0` en FUERZA y DESCANSO |
+| `Dplus_Plan` | Desnivel positivo planificado, en metros. **Celda vacía = sin D+, no cero** |
 | `Series` | Solo FUERZA: número de series |
 | `Sesión` | Título de la tarjeta |
 | `Descripción` | Texto largo. Admite saltos de línea |
 | `Ejercicios` | Solo FUERZA: `Nombre × reps; Nombre × reps` separados por `;` |
 | `Km_Real` | Distancia ejecutada (opcional) |
+| `Dplus_Real` | Desnivel real, en metros (opcional). Lo rellena Garmin solo |
 | `Tiempo_Real` | `hh:mm:ss` (opcional) |
 | `Reacción` | 😊 · 😐 · 😞 (opcional) |
 
@@ -294,6 +297,48 @@ Cómo se arma el plan:
 Va en **streaming** porque el pensamiento de Opus 5 y la respuesta comparten `max_tokens`,
 y un plan largo supera con holgura los ~16k donde las peticiones sin stream empiezan a
 chocar con timeouts.
+
+---
+
+## Desnivel (D+)
+
+Para trail el desnivel es tanta carga como la distancia, así que el plan lo trata
+igual que los kilómetros:
+
+- `day.dplus` — metros de ascenso planificados. `0` en FUERZA y DESCANSO.
+- `log.dplus` — metros reales. **Lo rellena Garmin solo**: `garminLogEntry()` lee
+  `elevGainM` de la actividad, que `sync_garmin.py` ya publicaba y nadie usaba.
+- `week.totalDplus` — lo calcula siempre la app sumando los días, nunca se confía
+  en la celda del Excel ni en la aritmética del modelo.
+
+### La regla: ausente no es cero
+
+`day.dplus` es **opcional, y su ausencia no significa "fue plano"** — significa
+"no se planificó". Todos los planes anteriores a v26 están así. Pintar 0 sería
+inventar un dato, así que el D+ solo aparece cuando hay D+ que mostrar, y por
+separado en cada mitad:
+
+- Lo **planificado** se muestra si algún día del plan lo trae (`planTieneDplus()`).
+- Lo **real** se muestra si algún registro lo trae — y eso llega desde Garmin
+  aunque el plan sea viejo y no tenga D+.
+
+Un plan sin D+ se ve exactamente igual que antes de v26. Si tocas esto, mantén la
+regla: los helpers `dplusDe()`, `weekPlanDplus()` y `weekRealDplus()` están para
+eso, y al exportar a Excel un día sin D+ escribe **celda vacía, no `0`**.
+
+### Dónde se nota
+
+| Superficie | Qué muestra |
+|---|---|
+| Cabecera de semana | `23 / 38 km · 1.240 / 2.100 m D+` — real contra planificado |
+| Tarjeta del día | `↗650m` junto a la duración estimada |
+| Modal | Chip de D+ y campo para registrarlo |
+| Analíticas | Tarjetas de m D+ y **m/km**, más el gráfico de D+ por semana |
+| `estSeconds()` | Suma el costo de subir: ~600 m de ascenso por hora |
+
+**m/km** es la métrica que faltaba: 2500 m en 44 km son 57 m/km. Si tu
+entrenamiento promedia 20, estás preparando un cerro corriendo en plano — la
+tarjeta muestra tu razón junto a la de la carrera.
 
 ---
 

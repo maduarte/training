@@ -141,6 +141,7 @@ esos datos. Es el modelo aceptado para un grupo de conocidos, no para usuarios a
   session: 'Rodaje suave',    // título de la tarjeta
   type: 'SUAVE' | 'MEDIO' | 'INTENSO' | 'FUERZA' | 'DESCANSO',
   km: 10,                     // 0 en FUERZA y DESCANSO
+  dplus: 650,                 // m D+ — OPCIONAL. Ausente ≠ 0: ver abajo
   desc: 'Texto largo.',
   sets: 3,                    // solo FUERZA
   exercises: [{name: 'Sentadilla', reps: '12'}]   // solo FUERZA
@@ -160,6 +161,18 @@ esos datos. Es el modelo aceptado para un grupo de conocidos, no para usuarios a
 }
 ```
 Las reacciones viven en `tw_rxn_<raceId>`, también indexadas por `day.id`.
+
+**`dplus` ausente no es cero.** Es el desnivel, y su ausencia significa "no se
+planificó", no "fue plano". Los planes anteriores a v26 no lo traen y deben
+seguir viéndose igual que siempre: nada de D+ en pantalla. Por eso toda lectura
+pasa por `dplusDe()` / `weekPlanDplus()` / `weekRealDplus()`, el Excel exporta
+celda vacía y no `0`, y la UI de D+ se decide por separado para lo planificado
+(`planTieneDplus()`) y lo real (que Garmin llena solo vía `elevGainM`).
+
+Los ids de carrera se generan con `nuevoRaceId()`, que agrega un sufijo
+aleatorio: `race_<ts>` a secas colisionaba entre dos carreras creadas en el mismo
+milisegundo, y como las claves de storage cuelgan del id, las dos compartían
+`tw_weeks_<id>` y `tw_logs_<id>`.
 
 ### Storage (`core/storage.js`)
 - `S.get(key)` / `S.set(key, val)` / `S.del(key)` — wrapper de localStorage
