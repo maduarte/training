@@ -206,6 +206,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .ex-card-left{}
 .ex-card-name{font-size:15px;font-weight:700;color:var(--cf-tx)}
 .ex-card-hint{font-size:9px;color:var(--dim);margin-top:2px;letter-spacing:.5px}
+/* Sin ficha en la biblioteca: la tarjeta no promete una descripción que no hay */
+.ex-card-nodesc .ex-card-hint{opacity:.45;font-style:italic}
 .ex-card-reps{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);background:#1a1a28;padding:4px 10px;border-radius:20px;flex-shrink:0}
 
 /* EXERCISE OVERLAY */

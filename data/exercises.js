@@ -61,7 +61,170 @@ const EX={
   // ── Movilidad ──
   'Rotación de cadera 90/90':'Sentado en el suelo, una pierna adelante a 90° y la otra al lado a 90°. Rota de un lado al otro sin usar las manos. Libera la rotación de cadera que necesitas para zancada amplia en cerro.',
   'Estiramiento de psoas':'Rodilla en el suelo en posición de caballero, empuja la cadera hacia adelante manteniendo el glúteo apretado. El psoas acortado inclina la pelvis y sobrecarga la cadena lateral.',
+
+  // ── Empuje y tren superior ──
+  'Flexiones':'Manos bajo los hombros, cuerpo en una línea recta de talones a cabeza. Baja hasta que el pecho quede a un puño del suelo, codos a 45° del torso (no abiertos en cruz). Sube sin que la cadera se hunda ni se levante. Si no llegas, apoya las rodillas antes que romper la línea.',
+  'Flexiones inclinadas':'Flexiones con las manos apoyadas en un banco, una mesa o la pared. Cuanto más alto el apoyo, más fácil. Misma línea de cuerpo que en el suelo: es la progresión, no una versión aguada.',
+  'Dominadas':'Colgado de la barra, manos algo más abiertas que los hombros. Antes de tirar, baja los hombros (aleja las orejas). Sube hasta pasar la barbilla llevando los codos al suelo, baja controlado hasta estirar del todo. Con banda elástica bajo los pies si aún no sale sola.',
+  'Press de banca':'Tumbado, pies firmes en el suelo, escápulas juntas contra el banco. Baja la barra al esternón tocando sin rebotar, codos a 45°. Empuja hasta estirar sin despegar la espalda alta.',
+  'Face pull':'Polea o banda a la altura de la cara. Tira hacia la frente separando las manos y rotando los hombros hacia fuera. Termina con los codos altos. Compensa la postura cerrada de hombros de las horas al computador y de los bastones.',
+
+  // ── Tren inferior ──
+  'Estocada inversa':'Da el paso hacia atrás, no hacia adelante: baja la rodilla trasera casi al suelo y vuelve empujando con el talón de la pierna delantera. Al retroceder, la rodilla delantera sufre menos que en la estocada clásica. El torso se mantiene vertical.',
+  'Estocada lateral':'Paso amplio hacia el lado. Flexiona la pierna del paso llevando la cadera atrás mientras la otra queda estirada. El pie apoyado entero, la rodilla apuntando a la punta del pie. Trabaja aductores y glúteo en el plano que los cerros sí exigen y el trote no.',
+  'Sentadilla sumo':'Pies muy abiertos, puntas hacia fuera unos 45°. Baja entre los talones manteniendo las rodillas hacia fuera y el torso vertical. Carga más aductores y glúteo que la sentadilla normal.',
+  'Peso muerto a una pierna':'De pie sobre una pierna, bisagra de cadera llevando la pierna libre atrás como contrapeso hasta que el torso quede casi horizontal. Cadera nivelada (la cadera libre no se abre al cielo), espalda neutra. Isquiotibiales y equilibrio en un solo gesto.',
+  'Puente de glúteo':'Boca arriba, rodillas dobladas, pies a ancho de caderas cerca del glúteo. Sube la cadera empujando con los talones hasta alinear rodilla-cadera-hombro. Aprieta el glúteo arriba 1 segundo. No hiperextiendas la lumbar para subir más.',
+  'Curl femoral nórdico':'De rodillas con los tobillos sujetos, baja el cuerpo hacia adelante lo más lento que puedas manteniendo la línea rodilla-cadera-hombro. Amortigua con las manos al final. Muy exigente: 3–5 repeticiones bien hechas bastan.',
+  'Curl femoral':'En máquina o con fitball: lleva los talones hacia el glúteo controlando la vuelta. La cadera no se despega. Protege el isquiotibial en las zancadas largas de bajada.',
+  'Extensión de cuádriceps':'En máquina, extiende la rodilla hasta casi estirar y baja lento. Sin impulso ni tirones. Trabajo aislado del cuádriceps, útil para volumen sin impacto.',
+  'Prensa de piernas':'Pies a ancho de caderas en la plataforma. Baja hasta 90° de rodilla sin que la cadera se despegue del respaldo. Empuja sin bloquear las rodillas del todo arriba.',
+  'Sentadilla a una pierna':'De pie sobre una pierna, la otra extendida al frente. Baja lo que controles manteniendo el talón en el suelo y la rodilla alineada. Empieza sentándote en un cajón alto y bájalo a medida que ganes control.',
+  'Step-up con rodilla alta':'Sube al cajón con una pierna y, arriba, lleva la rodilla contraria al pecho. Mantén un instante el equilibrio antes de bajar controlado. Sube fuerza y control de cadera a la vez.',
+  'Subida de escaleras':'Escalones de dos en dos a ritmo sostenido, empujando con el talón completo y el torso ligeramente inclinado. Baja caminando de a uno. Lo más parecido a una subida de cerro sin cerro.',
+
+  // ── Core ──
+  'Plancha con toque de hombro':'En plancha alta (brazos estirados), toca el hombro contrario con una mano sin que la cadera rote. Pies algo separados para más base. La estabilidad importa más que el número de toques.',
+  'Hollow hold':'Boca arriba, brazos y piernas estirados, lumbar pegada al suelo. Sube hombros y piernas hasta formar una banana. Si la lumbar se despega, dobla las rodillas. Es la base del control abdominal real.',
+  'Russian twist':'Sentado, torso inclinado atrás, pies en el suelo o suspendidos. Rota el torso de lado a lado llevando las manos junto a la cadera. Rota el tronco, no solo los brazos.',
+  'Superman':'Boca abajo, brazos extendidos al frente. Eleva pecho, brazos y piernas a la vez unos centímetros y sostén. Mirada al suelo, cuello neutro. Fortalece la cadena posterior lumbar.',
+  'Mountain climber':'En plancha alta, lleva las rodillas al pecho alternando rápido sin que la cadera suba ni se hunda. Las manos firmes bajo los hombros. Core y pulsaciones a la vez.',
+  'Escalador':'En plancha alta, lleva las rodillas al pecho alternando rápido sin que la cadera suba ni se hunda. Las manos firmes bajo los hombros. Core y pulsaciones a la vez.',
+  'Abdominales':'Boca arriba, rodillas dobladas. Enrolla la columna vértebra a vértebra llevando las costillas hacia la pelvis, sin tirar del cuello con las manos. Baja lento.',
+
+  // ── Potencia y acondicionamiento ──
+  'Burpee':'De pie → manos al suelo → salta o lleva los pies a plancha → flexión (opcional) → recoge los pies → salto con los brazos arriba. Aterriza suave. Si la espalda se arquea al recoger, baja el ritmo.',
+  'Salto a la cuerda':'Saltos bajos sobre la punta de los pies, rodillas apenas flexionadas, muñecas haciendo el giro (no los brazos). Trabaja el rebote del tendón de Aquiles, clave para correr barato.',
+  'Skipping':'Trote en el sitio o avanzando llevando las rodillas a la altura de la cadera, apoyo activo en la punta del pie y brazos coordinados. Técnica de zancada y pie rápido.',
+  'Talones al glúteo':'Trote llevando los talones a tocar el glúteo, cadera estable y torso erguido. Activa isquiotibiales y mejora el recobro de la pierna.',
+  'Farmer walk':'Camina erguido con peso en ambas manos (mancuernas, kettlebells o bidones). Hombros atrás, core apretado, pasos normales. Entrena el agarre y la estabilidad del tronco con carga, como cargar la mochila en ruta.',
 };
+
+// ══════════════════════════════════════════════════
+// BÚSQUEDA DE DESCRIPCIÓN
+// ══════════════════════════════════════════════════
+// Los nombres llegan de tres lados y ninguno garantiza la forma exacta de la
+// clave: el esqueleto local, un Excel escrito a mano (o por una IA) y el
+// round-trip del propio export, que hasta v22 pegaba las repeticiones al nombre
+// ("Sentadilla búlgara 12 c/lado"). Por eso la búsqueda normaliza y, si no
+// acierta, va soltando palabras del final hasta dar con una clave conocida.
+
+// Sinónimos → clave canónica. Solo lo que un plan escrito fuera de la app
+// nombraría distinto; las variantes de tildes y mayúsculas las cubre exNorm().
+const EX_ALIAS={
+  'push up':'Flexiones', 'push-up':'Flexiones', 'flexion':'Flexiones',
+  'flexiones de brazos':'Flexiones', 'lagartijas':'Flexiones',
+  'pull up':'Dominadas', 'pull-up':'Dominadas',
+  'bulgara':'Sentadilla búlgara', 'split squat bulgaro':'Sentadilla búlgara',
+  'zancada bulgara':'Sentadilla búlgara',
+  'squat':'Sentadilla', 'sentadillas':'Sentadilla',
+  'estocadas':'Estocada', 'lunge':'Estocada', 'lunges':'Estocada',
+  'zancada':'Estocada', 'zancadas':'Estocada',
+  'estocada atras':'Estocada inversa', 'zancada inversa':'Estocada inversa',
+  'peso muerto':'Peso muerto rumano', 'rdl':'Peso muerto rumano',
+  'gemelos':'Elevación de talón', 'elevacion de gemelos':'Elevación de talón',
+  'elevaciones de talon':'Elevación de talón',
+  'sentadilla isometrica en pared':'Sentadilla isométrica',
+  'silla':'Sentadilla isométrica', 'wall sit':'Sentadilla isométrica',
+  'puente de gluteos':'Puente de glúteo', 'hip bridge':'Puente de glúteo',
+  'plank':'Plancha', 'planchas':'Plancha', 'side plank':'Plancha lateral',
+  'mountain climbers':'Mountain climber', 'escaladores':'Escalador',
+  'burpees':'Burpee', 'comba':'Salto a la cuerda', 'cuerda':'Salto a la cuerda',
+  'saltar la cuerda':'Salto a la cuerda', 'soga':'Salto a la cuerda',
+  'nordic curl':'Curl femoral nórdico', 'nordicos':'Curl femoral nórdico',
+  'sentadilla a una pierna asistida':'Sentadilla a una pierna',
+  'pistol squat':'Sentadilla a una pierna',
+  'core anti rotacion':'Core antirotación', 'pallof press':'Core antirotación',
+  'caminata del granjero':'Farmer walk',
+  'crunch':'Abdominales', 'crunches':'Abdominales',
+  'step up':'Box step-up', 'step-up':'Box step-up', 'subida al cajon':'Box step-up',
+  'box jump':'Salto al cajón', 'salto al banco':'Salto al cajón',
+  'bird dog':'Bird-dog', 'perro pajaro':'Bird-dog',
+  'dead-bug':'Dead bug', 'bicho muerto':'Dead bug',
+  'foam rolling':'Foam roller', 'rodillo':'Foam roller',
+  'movilidad de caderas':'Movilidad de cadera',
+  'estiramiento':'Estiramientos', 'elongaciones':'Estiramientos',
+};
+
+// Minúsculas, sin tildes, sin puntuación y con espacios colapsados: "Sentadilla
+// Búlgara" y "sentadilla bulgara." caen en la misma clave.
+function exNorm(s){
+  return String(s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .replace(/[^a-z0-9/\s-]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+// Índice normalizado, construido una sola vez al cargar el archivo.
+const EX_INDEX=(()=>{
+  const ix={};
+  Object.keys(EX).forEach(k=>{ix[exNorm(k)]=k;});
+  Object.keys(EX_ALIAS).forEach(a=>{
+    const canon=EX_ALIAS[a];
+    if(EX[canon])ix[exNorm(a)]=canon;
+  });
+  return ix;
+})();
+
+// Repara en memoria los planes que ya quedaron guardados con el nombre partido
+// mal ("Sentadilla búlgara 12" + "c/lado"). Solo toca lo que está roto: si el
+// nombre guardado ya es el de la ficha —aunque cambie en tildes o mayúsculas, o
+// sea un sinónimo— se respeta tal cual lo escribió quien armó el plan.
+function exRepair(exercises){
+  if(!Array.isArray(exercises))return exercises;
+  return exercises.map(ex=>{
+    if(!ex||!ex.name)return ex;
+    const ficha=exLookup(ex.name);
+    if(!ficha||exNorm(ficha.name)===exNorm(ex.name))return ex;
+    const sp=exSplitReps(`${ex.name} ${ex.reps||''}`.trim());
+    return sp&&exNorm(sp.name)===exNorm(ficha.name)?{...ex,name:ficha.name,reps:sp.reps}:ex;
+  });
+}
+
+// Separa "Sentadilla búlgara × 12 c/lado" (o el formato viejo, sin separador)
+// en {name, reps}. Partir por el último espacio —lo que hacía el import hasta
+// v22— rompía todo nombre cuyas repeticiones llevaran espacio: "Plancha 40 seg"
+// terminaba llamándose "Plancha 40" y se quedaba sin ficha.
+function exSplitReps(txt){
+  const t=String(txt||'').trim();
+  if(!t)return null;
+  const sep=t.match(/^(.*?)\s*[×]\s*(.+)$/);
+  if(sep)return {name:sep[1].trim(),reps:sep[2].trim()};
+
+  const w=t.split(/\s+/);
+  // Las repeticiones son un número, un "x12" o nada: si lo que sobra no tiene
+  // esa forma, el corte está mal y seguimos probando nombres más cortos.
+  const esReps=r=>!r||/^[x×]?\d/.test(r);
+  for(let i=w.length;i>0;i--){
+    const resto=w.slice(i).join(' ');
+    if(EX_INDEX[exNorm(w.slice(0,i).join(' '))]&&esReps(resto))
+      return {name:w.slice(0,i).join(' '),reps:resto};
+  }
+  // Nombre que no está en la biblioteca: el corte va en el primer número.
+  const n=w.findIndex(x=>/^[x×]?\d/.test(x));
+  return n>0?{name:w.slice(0,n).join(' '),reps:w.slice(n).join(' ')}:{name:t,reps:''};
+}
+
+// Devuelve {name, desc} con el nombre canónico de la ficha, o null si el
+// ejercicio no está en la biblioteca. Nunca lanza.
+function exLookup(name){
+  const norm=exNorm(name);
+  if(!norm)return null;
+  const hit=k=>EX_INDEX[k]?{name:EX_INDEX[k],desc:EX[EX_INDEX[k]]}:null;
+  const exact=hit(norm);
+  if(exact)return exact;
+  // "sentadilla bulgara 12 c/lado" → "sentadilla bulgara 12" → "sentadilla
+  // bulgara". Se corta en la primera palabra para no cazar cualquier cosa con
+  // la primera palabra suelta.
+  const w=norm.split(' ');
+  for(let i=w.length-1;i>0;i--){
+    const m=hit(w.slice(0,i).join(' '));
+    if(m)return m;
+  }
+  return null;
+}
 
 // ══════════════════════════════════════════════════
 // ATHLETES + RACES DATA

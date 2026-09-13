@@ -48,7 +48,7 @@ training/
 │   └── storage.js        # Helpers de storage, constantes TYPE y PHASE_C
 ├── data/
 │   ├── races.js          # Datos de carreras, buildWeeks(), helpers multi-carrera
-│   └── exercises.js      # Biblioteca de ejercicios con descripciones (~28 ejercicios)
+│   └── exercises.js      # Biblioteca de ejercicios con descripciones (~80) + búsqueda tolerante
 ├── ui/
 │   └── styles.css        # Todos los estilos (~345 líneas)
 ├── api/
@@ -199,13 +199,20 @@ así que el orden no importa, pero los nombres de hoja y de columna sí.
 | `Series` | Solo FUERZA: número de series |
 | `Sesión` | Título de la tarjeta |
 | `Descripción` | Texto largo. Admite saltos de línea |
-| `Ejercicios` | Solo FUERZA: `Nombre reps; Nombre reps` separados por `;` |
+| `Ejercicios` | Solo FUERZA: `Nombre × reps; Nombre × reps` separados por `;` |
 | `Km_Real` | Distancia ejecutada (opcional) |
 | `Tiempo_Real` | `hh:mm:ss` (opcional) |
 | `Reacción` | 😊 · 😐 · 😞 (opcional) |
 
+El `×` separa el nombre de las repeticiones. Si falta, el import deduce el corte buscando el
+nombre en la biblioteca y, si no está, cortando en el primer número (`Plancha 40 seg` →
+`Plancha` + `40 seg`).
+
 Los nombres de `Ejercicios` que coinciden con las claves de `data/exercises.js` muestran su
-descripción al tocarlos; el resto se muestran sin ficha.
+descripción al tocarlos. La búsqueda ignora tildes y mayúsculas y acepta sinónimos comunes
+(`push-up` → `Flexiones`), así que un plan escrito fuera de la app no necesita copiar las
+claves al pie de la letra. Los que no calzan con nada se muestran marcados «Sin ficha de
+técnica».
 
 ### Hoja `Carrera` — una sola fila de datos
 

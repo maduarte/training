@@ -1,7 +1,7 @@
 // ── Feature Flags ────────────────────────────────────────────
 // Súbela junto con CACHE_NAME en sw.js. Se muestra al pie de Ajustes: es la
 // única forma de saber si el dispositivo está sirviendo una versión cacheada.
-const APP_VERSION = 'v22';
+const APP_VERSION = 'v23';
 
 const PACES_AUTO_UPDATE = false; // Set to true to enable auto-updating pace profile from workout logs
 
@@ -118,6 +118,10 @@ function launchApp(aid,rid){
   st.weeks=JSON.parse(JSON.stringify(race.weeks));
   const savedW=S.get(`tw_weeks_${rid}`);
   if(savedW)st.weeks=savedW;
+  // Los planes importados antes de v23 traen el nombre del ejercicio con las
+  // repeticiones pegadas. Se corrige en memoria, sin escribir storage: un S.set
+  // aquí dispararía un push de sync en cada arranque.
+  st.weeks.forEach(w=>w.days?.forEach(d=>{if(d.exercises)d.exercises=exRepair(d.exercises);}));
   st.reactions=S.get(`tw_rxn_${rid}`)||{};
   st.logs=S.get(`tw_logs_${rid}`)||{};
   st.overrides=S.get(`tw_overrides_${rid}`)||{};
@@ -628,8 +632,14 @@ function drawGarminLaps(a){
   const hasHr=laps.some(l=>l.hr);
   const ptColors=laps.map(l=>l.z!=null?HR_ZONE_COLORS[l.z]:'#8888aa');
 
+  // El eje va invertido (ver abajo) y la barra nace en el extremo lento, no en
+  // cero: su longitud mide cuánto más rápido fue el tramo que el peor de la
+  // sesión. Cero no sirve de origen — entre 5:52 y 6:52 hay un minuto de
+  // diferencia que desde cero se vería como doce barras idénticas.
+  const yMin=Math.max(0,minP-spanP*0.35), yMax=maxP+spanP*0.15;
+
   const ds=[{
-    type:'bar',label:'Ritmo',data:paces,yAxisID:'y',order:2,
+    type:'bar',label:'Ritmo',data:paces,yAxisID:'y',order:2,base:yMax,
     backgroundColor:barColors,borderWidth:0,borderRadius:3
   }];
   if(hasHr)ds.push({
@@ -638,9 +648,6 @@ function drawGarminLaps(a){
     pointRadius:3.5,pointBackgroundColor:ptColors,pointBorderColor:ptColors
   });
 
-  // El ritmo no arranca en cero: entre 5:52 y 6:52 hay un minuto de diferencia
-  // que desde cero se vería como doce barras idénticas.
-  const pad=spanP*0.35;
   st.chartLaps=new Chart(cv.getContext('2d'),{
     data:{labels:laps.map(l=>l.n),datasets:ds},
     options:{
@@ -657,7 +664,9 @@ function drawGarminLaps(a){
       },
       scales:{
         x:{ticks:{color:'#8888aa',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}},
-        y:{position:'left',min:Math.max(0,minP-pad),max:maxP+spanP*0.15,
+        // reverse: el ritmo es tiempo, así que menos es mejor. Invertido, el eje
+        // deja arriba a los tramos rápidos y la barra más larga es la más veloz.
+        y:{position:'left',reverse:true,min:yMin,max:yMax,
            ticks:{color:'#8888aa',font:{size:9},maxTicksLimit:5,callback:(v)=>fmtPace(v)},
            grid:{color:'#141420'}},
         y1:{position:'right',display:hasHr,
@@ -735,14 +744,16 @@ function openModal(i){
     body.innerHTML=`
       <div class="m-sets-badge">🔁 ${day.sets||3} SERIES</div>
       <div class="ex-list" id="ex-list">
-        ${day.exercises.map((ex,idx)=>`
-          <div class="ex-card" onclick="showExInfo('${ex.name.replace(/'/g,"\\'")}')">
+        ${day.exercises.map(ex=>{
+          const ficha=exLookup(ex.name);
+          return `
+          <div class="ex-card${ficha?'':' ex-card-nodesc'}" onclick="showExInfo('${ex.name.replace(/'/g,"\\'")}')">
             <div class="ex-card-left">
-              <div class="ex-card-name">${ex.name}</div>
-              <div class="ex-card-hint">Toca para ver descripción</div>
+              <div class="ex-card-name">${escHtml(ex.name)}</div>
+              <div class="ex-card-hint">${ficha?'Toca para ver descripción':'Sin ficha de técnica'}</div>
             </div>
-            <div class="ex-card-reps">${ex.reps}</div>
-          </div>`).join('')}
+            <div class="ex-card-reps">${escHtml(ex.reps)}</div>
+          </div>`;}).join('')}
       </div>
       <div class="m-rxn-row">
         <span class="m-rxn-lbl">SENSACIÓN</span>
@@ -1003,11 +1014,15 @@ function saveLog(){
 }
 
 // Exercise overlay
+// exLookup() vive en data/exercises.js y tolera tildes, mayúsculas y nombres con
+// las repeticiones pegadas. Si aun así no hay ficha, la tarjeta ni siquiera
+// invita a tocarla (ver openModal), pero el overlay responde igual por si el
+// nombre llegó desde un plan viejo ya guardado.
 function showExInfo(name){
-  const desc=EX[name];
-  if(!desc)return;
-  document.getElementById('ex-box-name').textContent=name;
-  document.getElementById('ex-box-desc').textContent=desc;
+  const ex=exLookup(name);
+  document.getElementById('ex-box-name').textContent=ex?ex.name:name;
+  document.getElementById('ex-box-desc').textContent=ex?ex.desc
+    :'Este ejercicio no está en la biblioteca, así que no tiene ficha con la técnica. Renómbralo como aparece en la biblioteca o pídeme que lo agregue.';
   document.getElementById('ex-overlay').classList.add('open');
 }
 function closeExOverlay(){
@@ -1757,7 +1772,9 @@ function exportToExcel(){
     w.days.forEach(day=>{
       const log=st.logs[day.id]||{};
       const rxn=st.reactions[day.id]||'';
-      const exStr=day.exercises?day.exercises.map(ex=>`${ex.name} ${ex.reps}`).join('; '):'';
+      // El "×" separa nombre de repeticiones. Sin él, "Plancha 40 seg" volvía
+      // del import llamándose "Plancha 40" y perdía su ficha de técnica.
+      const exStr=day.exercises?day.exercises.map(ex=>ex.reps?`${ex.name} × ${ex.reps}`:ex.name).join('; '):'';
       let timeStr='';
       // saveLog() y el autofill de Garmin guardan th/tm/ts. Exportamos siempre
       // hh:mm:ss para que el import no tenga que adivinar el formato.
@@ -1836,10 +1853,7 @@ function importFromExcel(){
           const dayId=`${raceId}_w${weeksArr.length-1}_d${di}`;
           const tipo=String(row[ix['Tipo']]||'DESCANSO').toUpperCase();
           const ejStr=String(row[ix['Ejercicios']]||'');
-          const exercises=ejStr?ejStr.split(';').filter(Boolean).map(s=>{
-            s=s.trim(); const sp=s.lastIndexOf(' ');
-            return sp>0?{name:s.slice(0,sp),reps:s.slice(sp+1)}:{name:s,reps:''};
-          }):undefined;
+          const exercises=ejStr?ejStr.split(';').map(s=>exSplitReps(s)).filter(Boolean):undefined;
           const day={
             id:dayId,
             date:String(row[ix['Fecha']]||''),
