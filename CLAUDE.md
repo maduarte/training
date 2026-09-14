@@ -1,6 +1,22 @@
-# CLAUDE.md — Nadie Corre Solo (NCS)
+# CLAUDE.md — Nadie Corre Solo (NCS) · REPO ARCHIVADO
 
-Archivo de contexto para traspaso a Claude Code. Lee esto completo antes de tocar cualquier archivo.
+> # ⛔ No trabajes en este repo.
+>
+> **El repo activo es [`maduarte/ncs-app`](https://github.com/maduarte/ncs-app)**, y es
+> el que Vercel despliega en <https://ncstraining.vercel.app/>. Su `CLAUDE.md` es el
+> documento vigente: léelo ahí, no acá.
+>
+> `training` quedó congelado en **v26** (sep-2026). `ncs-app` va en v42 y tiene cosas
+> que acá no existen: la integración con intervals.icu (OAuth, webhooks, `api/icu/`),
+> el onboarding por etapas, el envío del código de recuperación por correo y el
+> descargo de responsabilidad.
+>
+> Lo que sigue se conserva solo como historia, y **contiene afirmaciones que ya no son
+> ciertas**. Las que más engañan están corregidas en línea, marcadas con ⚠️.
+
+---
+
+Archivo de contexto para traspaso a Claude Code, en su estado al congelarse el repo.
 
 ---
 
@@ -151,9 +167,13 @@ para la misma actividad. Las tres fallan en silencio.
    km — la lógica ya existe en `garmin-sync/sync_garmin.py`.
 
 **Y la que casi cuesta el proyecto:** intervals.icu **no entrega webhooks de actividad
-para lo que llega reenviado desde Strava**. Garmin tiene que entrar directo. El campo
-`icu_garmin_sync_activities` es solo una preferencia; el que no miente es
-`icu_garmin_last_upload`.
+para lo que llega reenviado desde Strava**. Garmin tiene que entrar directo.
+
+⚠️ Acá seguía una afirmación falsa: que `icu_garmin_sync_activities` es solo una
+preferencia pero `icu_garmin_last_upload` «es el que no miente». **No es cierto.** Se
+comprobó con una cuenta de 85 actividades sincronizadas desde Garmin y el campo seguía
+en `null`. **Ninguno de los dos sirve para saber si la conexión con Garmin funciona.**
+Lo único que lo dice es que lleguen actividades.
 
 Endpoints (el spec vive en `https://intervals.icu/api/v1/docs`, pedirlo con
 `Accept: application/json` o devuelve la SPA):
@@ -307,15 +327,18 @@ const PACES_AUTO_UPDATE = false;   // desactivado — retomar en iteración futu
 
 ---
 
-## El repo ncs-app
+## El repo ncs-app ⚠️
 
-Existe `maduarte/ncs-app` (privado), creado el 12-sep-2026 como destino de la migración.
-**No es producción y está desactualizado a propósito:** es un snapshot de v22, mientras
-este repo va en v26. Vercel sigue desplegando desde `training`.
+**Esta sección decía lo contrario de lo que terminó pasando.** Decía que `ncs-app` era
+un snapshot de v22 que no había que tocar, y que `training` era la única fuente de
+verdad. Se invirtió: la migración se completó en `ncs-app`, Vercel se repuntó a ese
+repo, y `training` es el que quedó congelado.
 
-No trabajes ahí ni lo sincronices commit a commit — dos repos activos a la vez fue
-exactamente lo que produjo la divergencia. Se sincroniza de una sola vez, el día que se
-repunte Vercel. Hasta entonces, **este repo es la única fuente de verdad**.
+`maduarte/ncs-app` (privado) es **producción**. Este repo no.
+
+La lección, que sirve para la próxima migración: mientras dos repos existen a la vez, el
+que dice cuál manda es Vercel, no un archivo de texto. Un `CLAUDE.md` que se declara a
+sí mismo la fuente de verdad sobrevive intacto a que la verdad cambie.
 
 ---
 
